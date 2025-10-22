@@ -1,0 +1,167 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== AUTENTICAÇÃO ====================
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String // Hash da senha (usar bcrypt)
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relacionamentos
+  accounts  Account[]
+  sessions  Session[]
+  bankrolls Bankroll[]
+  bets      Bet[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ==================== GESTÃO DE BANCA ====================
+
+model Bankroll {
+  id             String   @id @default(cuid())
+  userId         String
+  name           String   @default("Banca Principal")
+  initialBalance Decimal  @db.Decimal(10, 2)
+  currentBalance Decimal  @db.Decimal(10, 2)
+  currency       String   @default("BRL")
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relacionamentos
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bets Bet[]
+
+  @@index([userId])
+  @@map("bankrolls")
+}
+
+// ==================== APOSTAS ====================
+
+model Bet {
+  id          String     @id @default(cuid())
+  userId      String
+  bankrollId  String
+  // Informações da aposta
+  sport       Sport      @default(FUTEBOL)
+  event       String // Nome do evento (ex: "Flamengo x Palmeiras")
+  competition String? // Campeonato/Liga
+  market      String // Tipo de mercado (ex: "Resultado Final", "Over/Under", "Ambas Marcam")
+  selection   String // Seleção escolhida (ex: "Flamengo", "Over 2.5", "Sim")
+  odds        Decimal    @db.Decimal(10, 2) // Cotação da aposta
+  stake       Decimal    @db.Decimal(10, 2) // Valor apostado
+  // Status e resultado
+  status      BetStatus  @default(PENDENTE)
+  result      BetResult?
+  profit      Decimal?   @db.Decimal(10, 2) // Lucro/Prejuízo
+  // Datas
+  eventDate   DateTime // Data do evento
+  placedAt    DateTime   @default(now()) // Data em que a aposta foi feita
+  settledAt   DateTime? // Data em que a aposta foi finalizada
+  // Informações adicionais
+  bookmaker   String? // Casa de apostas
+  notes       String?    @db.Text // Observações sobre a aposta
+  tags        String[] // Tags para categorização
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relacionamentos
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bankroll Bankroll @relation(fields: [bankrollId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([bankrollId])
+  @@index([status])
+  @@index([sport])
+  @@index([eventDate])
+  @@map("bets")
+}
+
+// ==================== ENUMS ====================
+
+enum Sport {
+  FUTEBOL
+  BASQUETE
+  TENIS
+  VOLEI
+  FUTSAL
+  HANDEBOL
+  BASEBALL
+  FUTEBOL_AMERICANO
+  HOCKEY
+  MMA
+  BOXE
+  ESPORTS
+  OUTROS
+}
+
+enum BetStatus {
+  PENDENTE // Aguardando resultado
+  GANHA // Aposta vencedora
+  PERDIDA // Aposta perdida
+  ANULADA // Aposta cancelada/devolvida
+  CASHOUT // Encerrada antecipadamente
+}
+
+enum BetResult {
+  WIN // Ganhou
+  LOSS // Perdeu
+  VOID // Anulada
+  HALF_WIN // Meia vitória (Asian Handicap)
+  HALF_LOSS // Meia derrota (Asian Handicap)
+}
