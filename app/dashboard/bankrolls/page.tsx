@@ -16,14 +16,7 @@ export default async function BankrollsPage() {
   }
 
   const bankrollsResult = await getBankrolls()
-  const bankrollsData = bankrollsResult.data || []
-
-  // Converter Decimal para number
-  const bankrolls = bankrollsData.map(b => ({
-    ...b,
-    initialBalance: Number(b.initialBalance),
-    currentBalance: Number(b.currentBalance),
-  }))
+  const bankrolls = bankrollsResult.data || []
 
   const totalBalance = bankrolls.reduce((sum, b) => sum + b.currentBalance, 0)
   const totalInitial = bankrolls.reduce((sum, b) => sum + b.initialBalance, 0)

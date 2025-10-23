@@ -1,8 +1,8 @@
-'use server'
+"use server";
 
-import { auth } from '@/auth'
-import { prisma } from '@/lib/prisma'
-import { revalidatePath } from 'next/cache'
+import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 import {
   CreateBankrollSchema,
   UpdateBankrollSchema,
@@ -10,17 +10,17 @@ import {
   type CreateBankrollInput,
   type UpdateBankrollInput,
   type UpdateBankrollBalanceInput,
-} from '@/lib/validations/bankroll'
+} from "@/lib/validations/bankroll";
 
 // Criar nova banca
 export async function createBankroll(data: CreateBankrollInput) {
   try {
-    const session = await auth()
+    const session = await auth();
     if (!session?.user?.id) {
-      return { error: 'Não autenticado' }
+      return { error: "Não autenticado" };
     }
 
-    const validatedData = CreateBankrollSchema.parse(data)
+    const validatedData = CreateBankrollSchema.parse(data);
 
     const bankroll = await prisma.bankroll.create({
       data: {
@@ -30,24 +30,31 @@ export async function createBankroll(data: CreateBankrollInput) {
         currentBalance: validatedData.initialBalance,
         currency: validatedData.currency,
       },
-    })
+    });
 
-    revalidatePath('/dashboard')
-    revalidatePath('/dashboard/bankrolls')
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/bankrolls");
 
-    return { success: true, data: bankroll }
+    // Converter Decimal para number para evitar erro de serialização
+    const bankrollData = {
+      ...bankroll,
+      initialBalance: Number(bankroll.initialBalance),
+      currentBalance: Number(bankroll.currentBalance),
+    };
+
+    return { success: true, data: bankrollData };
   } catch (error: any) {
-    console.error('Erro ao criar banca:', error)
-    return { error: error.message || 'Erro ao criar banca' }
+    console.error("Erro ao criar banca:", error);
+    return { error: error.message || "Erro ao criar banca" };
   }
 }
 
 // Buscar todas as bancas do usuário
 export async function getBankrolls() {
   try {
-    const session = await auth()
+    const session = await auth();
     if (!session?.user?.id) {
-      return { error: 'Não autenticado' }
+      return { error: "Não autenticado" };
     }
 
     const bankrolls = await prisma.bankroll.findMany({
@@ -60,23 +67,30 @@ export async function getBankrolls() {
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
-    })
+    });
 
-    return { success: true, data: bankrolls }
+    // Converter Decimal para number para evitar erro de serialização
+    const bankrollsData = bankrolls.map((b) => ({
+      ...b,
+      initialBalance: Number(b.initialBalance),
+      currentBalance: Number(b.currentBalance),
+    }));
+
+    return { success: true, data: bankrollsData };
   } catch (error: any) {
-    console.error('Erro ao buscar bancas:', error)
-    return { error: error.message || 'Erro ao buscar bancas' }
+    console.error("Erro ao buscar bancas:", error);
+    return { error: error.message || "Erro ao buscar bancas" };
   }
 }
 
 // Buscar banca por ID
 export async function getBankrollById(id: string) {
   try {
-    const session = await auth()
+    const session = await auth();
     if (!session?.user?.id) {
-      return { error: 'Não autenticado' }
+      return { error: "Não autenticado" };
     }
 
     const bankroll = await prisma.bankroll.findFirst({
@@ -90,31 +104,44 @@ export async function getBankrollById(id: string) {
         },
         bets: {
           take: 10,
-          orderBy: { placedAt: 'desc' },
+          orderBy: { placedAt: "desc" },
         },
       },
-    })
+    });
 
     if (!bankroll) {
-      return { error: 'Banca não encontrada' }
+      return { error: "Banca não encontrada" };
     }
 
-    return { success: true, data: bankroll }
+    // Converter Decimal para number para evitar erro de serialização
+    const bankrollData = {
+      ...bankroll,
+      initialBalance: Number(bankroll.initialBalance),
+      currentBalance: Number(bankroll.currentBalance),
+      bets: bankroll.bets.map((bet) => ({
+        ...bet,
+        odds: Number(bet.odds),
+        stake: Number(bet.stake),
+        profit: bet.profit ? Number(bet.profit) : null,
+      })),
+    };
+
+    return { success: true, data: bankrollData };
   } catch (error: any) {
-    console.error('Erro ao buscar banca:', error)
-    return { error: error.message || 'Erro ao buscar banca' }
+    console.error("Erro ao buscar banca:", error);
+    return { error: error.message || "Erro ao buscar banca" };
   }
 }
 
 // Atualizar banca
 export async function updateBankroll(data: UpdateBankrollInput) {
   try {
-    const session = await auth()
+    const session = await auth();
     if (!session?.user?.id) {
-      return { error: 'Não autenticado' }
+      return { error: "Não autenticado" };
     }
 
-    const validatedData = UpdateBankrollSchema.parse(data)
+    const validatedData = UpdateBankrollSchema.parse(data);
 
     // Verificar se a banca pertence ao usuário
     const existingBankroll = await prisma.bankroll.findFirst({
@@ -122,10 +149,10 @@ export async function updateBankroll(data: UpdateBankrollInput) {
         id: validatedData.id,
         userId: session.user.id,
       },
-    })
+    });
 
     if (!existingBankroll) {
-      return { error: 'Banca não encontrada' }
+      return { error: "Banca não encontrada" };
     }
 
     const bankroll = await prisma.bankroll.update({
@@ -134,27 +161,34 @@ export async function updateBankroll(data: UpdateBankrollInput) {
         name: validatedData.name,
         isActive: validatedData.isActive,
       },
-    })
+    });
 
-    revalidatePath('/dashboard')
-    revalidatePath('/dashboard/bankrolls')
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/bankrolls");
 
-    return { success: true, data: bankroll }
+    // Converter Decimal para number para evitar erro de serialização
+    const bankrollData = {
+      ...bankroll,
+      initialBalance: Number(bankroll.initialBalance),
+      currentBalance: Number(bankroll.currentBalance),
+    };
+
+    return { success: true, data: bankrollData };
   } catch (error: any) {
-    console.error('Erro ao atualizar banca:', error)
-    return { error: error.message || 'Erro ao atualizar banca' }
+    console.error("Erro ao atualizar banca:", error);
+    return { error: error.message || "Erro ao atualizar banca" };
   }
 }
 
 // Atualizar saldo da banca
 export async function updateBankrollBalance(data: UpdateBankrollBalanceInput) {
   try {
-    const session = await auth()
+    const session = await auth();
     if (!session?.user?.id) {
-      return { error: 'Não autenticado' }
+      return { error: "Não autenticado" };
     }
 
-    const validatedData = UpdateBankrollBalanceSchema.parse(data)
+    const validatedData = UpdateBankrollBalanceSchema.parse(data);
 
     // Verificar se a banca pertence ao usuário
     const existingBankroll = await prisma.bankroll.findFirst({
@@ -162,29 +196,31 @@ export async function updateBankrollBalance(data: UpdateBankrollBalanceInput) {
         id: validatedData.id,
         userId: session.user.id,
       },
-    })
+    });
 
     if (!existingBankroll) {
-      return { error: 'Banca não encontrada' }
+      return { error: "Banca não encontrada" };
     }
 
-    let newBalance: number
+    let newBalance: number;
 
     switch (validatedData.operation) {
-      case 'add':
-        newBalance = Number(existingBankroll.currentBalance) + validatedData.amount
-        break
-      case 'subtract':
-        newBalance = Number(existingBankroll.currentBalance) - validatedData.amount
+      case "add":
+        newBalance =
+          Number(existingBankroll.currentBalance) + validatedData.amount;
+        break;
+      case "subtract":
+        newBalance =
+          Number(existingBankroll.currentBalance) - validatedData.amount;
         if (newBalance < 0) {
-          return { error: 'Saldo insuficiente' }
+          return { error: "Saldo insuficiente" };
         }
-        break
-      case 'set':
-        newBalance = validatedData.amount
-        break
+        break;
+      case "set":
+        newBalance = validatedData.amount;
+        break;
       default:
-        return { error: 'Operação inválida' }
+        return { error: "Operação inválida" };
     }
 
     const bankroll = await prisma.bankroll.update({
@@ -192,24 +228,31 @@ export async function updateBankrollBalance(data: UpdateBankrollBalanceInput) {
       data: {
         currentBalance: newBalance,
       },
-    })
+    });
 
-    revalidatePath('/dashboard')
-    revalidatePath('/dashboard/bankrolls')
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/bankrolls");
 
-    return { success: true, data: bankroll }
+    // Converter Decimal para number para evitar erro de serialização
+    const bankrollData = {
+      ...bankroll,
+      initialBalance: Number(bankroll.initialBalance),
+      currentBalance: Number(bankroll.currentBalance),
+    };
+
+    return { success: true, data: bankrollData };
   } catch (error: any) {
-    console.error('Erro ao atualizar saldo:', error)
-    return { error: error.message || 'Erro ao atualizar saldo' }
+    console.error("Erro ao atualizar saldo:", error);
+    return { error: error.message || "Erro ao atualizar saldo" };
   }
 }
 
 // Deletar banca
 export async function deleteBankroll(id: string) {
   try {
-    const session = await auth()
+    const session = await auth();
     if (!session?.user?.id) {
-      return { error: 'Não autenticado' }
+      return { error: "Não autenticado" };
     }
 
     // Verificar se a banca pertence ao usuário
@@ -223,39 +266,39 @@ export async function deleteBankroll(id: string) {
           select: { bets: true },
         },
       },
-    })
+    });
 
     if (!existingBankroll) {
-      return { error: 'Banca não encontrada' }
+      return { error: "Banca não encontrada" };
     }
 
     // Verificar se há apostas associadas
     if (existingBankroll._count.bets > 0) {
-      return { 
-        error: `Não é possível deletar. Existem ${existingBankroll._count.bets} apostas associadas.` 
-      }
+      return {
+        error: `Não é possível deletar. Existem ${existingBankroll._count.bets} apostas associadas.`,
+      };
     }
 
     await prisma.bankroll.delete({
       where: { id },
-    })
+    });
 
-    revalidatePath('/dashboard')
-    revalidatePath('/dashboard/bankrolls')
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/bankrolls");
 
-    return { success: true, message: 'Banca deletada com sucesso' }
+    return { success: true, message: "Banca deletada com sucesso" };
   } catch (error: any) {
-    console.error('Erro ao deletar banca:', error)
-    return { error: error.message || 'Erro ao deletar banca' }
+    console.error("Erro ao deletar banca:", error);
+    return { error: error.message || "Erro ao deletar banca" };
   }
 }
 
 // Buscar banca ativa (principal)
 export async function getActiveBankroll() {
   try {
-    const session = await auth()
+    const session = await auth();
     if (!session?.user?.id) {
-      return { error: 'Não autenticado' }
+      return { error: "Não autenticado" };
     }
 
     const bankroll = await prisma.bankroll.findFirst({
@@ -264,18 +307,24 @@ export async function getActiveBankroll() {
         isActive: true,
       },
       orderBy: {
-        createdAt: 'asc', // Pega a primeira criada
+        createdAt: "asc", // Pega a primeira criada
       },
-    })
+    });
 
     if (!bankroll) {
-      return { error: 'Nenhuma banca ativa encontrada' }
+      return { error: "Nenhuma banca ativa encontrada" };
     }
 
-    return { success: true, data: bankroll }
+    // Converter Decimal para number para evitar erro de serialização
+    const bankrollData = {
+      ...bankroll,
+      initialBalance: Number(bankroll.initialBalance),
+      currentBalance: Number(bankroll.currentBalance),
+    };
+
+    return { success: true, data: bankrollData };
   } catch (error: any) {
-    console.error('Erro ao buscar banca ativa:', error)
-    return { error: error.message || 'Erro ao buscar banca ativa' }
+    console.error("Erro ao buscar banca ativa:", error);
+    return { error: error.message || "Erro ao buscar banca ativa" };
   }
 }
-
