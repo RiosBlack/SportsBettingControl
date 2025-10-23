@@ -1,12 +1,12 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { updateBankrollBalance, updateBankroll } from '@/lib/actions/bankroll'
+import { updateBankrollBalance, updateBankroll, deleteBankroll } from '@/lib/actions/bankroll'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { 
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -15,6 +15,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -61,7 +72,7 @@ export function BankrollsList({ bankrolls }: BankrollsListProps) {
     })
   }
 
-  const toggleActive = (bankroll: BankrollWithCount) => {
+  const toggleActive = (bankroll: Bankroll) => {
     startTransition(async () => {
       const result = await updateBankroll({
         id: bankroll.id,
@@ -70,6 +81,18 @@ export function BankrollsList({ bankrolls }: BankrollsListProps) {
 
       if (result.success) {
         toast.success(`Banca ${result.data?.isActive ? 'ativada' : 'desativada'}`)
+      } else {
+        toast.error(result.error)
+      }
+    })
+  }
+
+  const handleDeleteBankroll = (bankroll: Bankroll) => {
+    startTransition(async () => {
+      const result = await deleteBankroll(bankroll.id)
+
+      if (result.success) {
+        toast.success('Banca excluída com sucesso!')
       } else {
         toast.error(result.error)
       }
@@ -205,11 +228,11 @@ export function BankrollsList({ bankrolls }: BankrollsListProps) {
                             <span>Novo saldo:</span>
                             <span className="font-semibold">
                               R$ {(
-                                operation === 'add' 
+                                operation === 'add'
                                   ? bankroll.currentBalance + Number(amount)
                                   : operation === 'subtract'
-                                  ? bankroll.currentBalance - Number(amount)
-                                  : Number(amount)
+                                    ? bankroll.currentBalance - Number(amount)
+                                    : Number(amount)
                               ).toFixed(2)}
                             </span>
                           </div>
@@ -228,16 +251,47 @@ export function BankrollsList({ bankrolls }: BankrollsListProps) {
                   </DialogContent>
                 </Dialog>
 
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setSelectedBankroll(bankroll)
-                    setOperation('subtract')
-                  }}
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={bankroll._count.bets > 0}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Excluir Banca</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Tem certeza que deseja excluir a banca <strong>"{bankroll.name}"</strong>?
+                        <br />
+                        <br />
+                        Esta ação não pode ser desfeita.
+                        {bankroll._count.bets > 0 && (
+                          <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-700">
+                            ⚠️ Esta banca possui {bankroll._count.bets} apostas e não pode ser excluída.
+                          </div>
+                        )}
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => handleDeleteBankroll(bankroll)}
+                        disabled={isPending || bankroll._count.bets > 0}
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        {isPending ? (
+                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Excluindo...</>
+                        ) : (
+                          'Excluir Banca'
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </CardContent>
           </Card>
