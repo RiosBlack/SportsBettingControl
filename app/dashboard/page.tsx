@@ -8,11 +8,11 @@ import {
 import { getBankrolls } from '@/lib/actions/bankroll'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { 
-  LogOut, 
-  User, 
-  TrendingUp, 
-  Target, 
+import {
+  LogOut,
+  User,
+  TrendingUp,
+  Target,
   Wallet,
   Trophy,
   BarChart3,
@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
+import PeriodStatsCard from './_components/period-stats-card'
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -70,6 +71,9 @@ export default async function DashboardPage() {
             </form>
           </div>
         </div>
+
+        {/* Period Stats */}
+        <PeriodStatsCard />
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
