@@ -171,16 +171,8 @@ export function CreateBetForm({ bankrolls, matches }: CreateBetFormProps) {
                 <MatchCombobox
                   matches={matches}
                   value={eventValue}
-                  onChange={(matchText) => {
-                    setEventValue(matchText)
-                    // Encontrar o jogo selecionado e preencher a competição
-                    const selectedMatch = matches.find(
-                      m => `${m.homeTeam} x ${m.awayTeam}` === matchText
-                    )
-                    if (selectedMatch) {
-                      setCompetitionValue(selectedMatch.competition)
-                    }
-                  }}
+                  onChange={setEventValue}
+                  onCompetitionChange={setCompetitionValue}
                   disabled={pending}
                 />
                 <input type="hidden" name="event" value={eventValue} required />

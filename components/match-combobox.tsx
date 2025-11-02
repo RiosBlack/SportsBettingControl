@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Command,
   CommandEmpty,
@@ -24,6 +24,7 @@ interface MatchComboboxProps {
   matches: Match[];
   value: string;
   onChange: (value: string) => void;
+  onCompetitionChange?: (competition: string) => void;
   disabled?: boolean;
 }
 
@@ -31,25 +32,47 @@ export function MatchCombobox({
   matches,
   value,
   onChange,
+  onCompetitionChange,
   disabled,
 }: MatchComboboxProps) {
   const [open, setOpen] = React.useState(false);
+  const [inputValue, setInputValue] = React.useState(value);
+
+  React.useEffect(() => {
+    setInputValue(value);
+  }, [value]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full justify-between"
+      <div className="flex justify-center itens-center">
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="-translate-y-1/2 h-full pt-10 pr-2"
+            disabled={disabled}
+            onClick={() => setOpen(!open)}
+          >
+            <ChevronsUpDown className="h-4 w-4 opacity-50" />
+          </button>
+        </PopoverTrigger>
+        <Input
+          value={inputValue}
+          onChange={(e) => {
+            setInputValue(e.target.value);
+            onChange(e.target.value);
+            // Limpar competição quando digitar manualmente
+            if (onCompetitionChange) {
+              onCompetitionChange("");
+            }
+          }}
+          onFocus={() => setOpen(true)}
+          placeholder="Ex: Flamengo x Palmeiras"
           disabled={disabled}
-        >
-          {value || "Ex: Flamengo x Palmeiras"}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-full p-0" align="start">
+          className="pr-10"
+        />
+
+      </div>
+      <PopoverContent className="w-full p-0" align="start" side="bottom" sideOffset={4}>
         <Command>
           <CommandInput placeholder="Buscar time..." />
           <CommandList>
@@ -63,6 +86,10 @@ export function MatchCombobox({
                     value={matchText}
                     onSelect={() => {
                       onChange(matchText);
+                      setInputValue(matchText);
+                      if (onCompetitionChange) {
+                        onCompetitionChange(match.competition);
+                      }
                       setOpen(false);
                     }}
                   >
@@ -106,7 +133,7 @@ export function MatchCombobox({
           </CommandList>
         </Command>
       </PopoverContent>
-    </Popover>
+    </Popover >
   );
 }
 
