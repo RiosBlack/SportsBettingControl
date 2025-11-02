@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { AuthError } from 'next-auth'
 import { z } from 'zod'
+import { syncTodayMatches } from './matches'
 
 // Schemas de validação
 const LoginSchema = z.object({
@@ -45,6 +46,11 @@ export async function authenticate(
       password: validatedFields.data.password,
       redirect: true,
       redirectTo: '/dashboard',
+    })
+
+    // Sincronizar jogos do dia em background (não bloqueia o login)
+    syncTodayMatches().catch((error) => {
+      console.error('Erro ao sincronizar jogos:', error)
     })
 
     return { message: 'Login realizado com sucesso!' }

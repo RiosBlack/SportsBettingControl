@@ -1,6 +1,7 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { getBankrolls } from '@/lib/actions/bankroll'
+import { getTodayMatches } from '@/lib/actions/matches'
 import { CreateBetForm } from './_components/create-bet-form'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
@@ -13,8 +14,13 @@ export default async function NewBetPage() {
     redirect('/login')
   }
 
-  const bankrollsResult = await getBankrolls()
+  const [bankrollsResult, matchesData] = await Promise.all([
+    getBankrolls(),
+    getTodayMatches(),
+  ])
+  
   const bankrollsData = bankrollsResult.data || []
+  const matches = matchesData?.matches || []
 
   if (bankrollsData.length === 0) {
     return (
@@ -45,7 +51,7 @@ export default async function NewBetPage() {
 
   return (
     <div className="container mx-auto max-w-4xl p-6">
-      <CreateBetForm bankrolls={bankrolls} />
+      <CreateBetForm bankrolls={bankrolls} matches={matches} />
     </div>
   )
 }

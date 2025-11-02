@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import { createBet } from '@/lib/actions/bet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,6 +12,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle, Plus, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { MatchCombobox } from '@/components/match-combobox'
+import type { Match } from '@/lib/types/matches'
+
 interface Bankroll {
   id: string
   name: string
@@ -25,9 +28,12 @@ interface Bankroll {
 
 interface CreateBetFormProps {
   bankrolls: Bankroll[]
+  matches: Match[]
 }
 
-export function CreateBetForm({ bankrolls }: CreateBetFormProps) {
+export function CreateBetForm({ bankrolls, matches }: CreateBetFormProps) {
+  const [eventValue, setEventValue] = useState('')
+  const [competitionValue, setCompetitionValue] = useState('')
   const router = useRouter()
 
   const [state, formAction, pending] = useActionState(
@@ -160,13 +166,36 @@ export function CreateBetForm({ bankrolls }: CreateBetFormProps) {
           {/* Evento */}
           <div className="space-y-2">
             <Label htmlFor="event">Evento *</Label>
-            <Input
-              id="event"
-              name="event"
-              placeholder="Ex: Flamengo x Palmeiras"
-              required
-              disabled={pending}
-            />
+            {matches.length > 0 ? (
+              <>
+                <MatchCombobox
+                  matches={matches}
+                  value={eventValue}
+                  onChange={(matchText) => {
+                    setEventValue(matchText)
+                    // Encontrar o jogo selecionado e preencher a competição
+                    const selectedMatch = matches.find(
+                      m => `${m.homeTeam} x ${m.awayTeam}` === matchText
+                    )
+                    if (selectedMatch) {
+                      setCompetitionValue(selectedMatch.competition)
+                    }
+                  }}
+                  disabled={pending}
+                />
+                <input type="hidden" name="event" value={eventValue} required />
+              </>
+            ) : (
+              <Input
+                id="event"
+                name="event"
+                placeholder="Ex: Flamengo x Palmeiras"
+                required
+                disabled={pending}
+                value={eventValue}
+                onChange={(e) => setEventValue(e.target.value)}
+              />
+            )}
           </div>
 
           {/* Competição */}
@@ -177,6 +206,8 @@ export function CreateBetForm({ bankrolls }: CreateBetFormProps) {
               name="competition"
               placeholder="Ex: Brasileirão Série A"
               disabled={pending}
+              value={competitionValue}
+              onChange={(e) => setCompetitionValue(e.target.value)}
             />
           </div>
 
