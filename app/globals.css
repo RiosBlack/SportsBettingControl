@@ -24,6 +24,14 @@
     --input: 0 0% 89.8%;
     --ring: 84 100% 42%;
     --radius: 0.5rem;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
@@ -46,6 +54,14 @@
     --border: 0 0% 14.9%;
     --input: 0 0% 14.9%;
     --ring: 84 100% 42%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 0 0% 98%;
+    --sidebar-primary-foreground: 240 5.9% 10%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
 
@@ -55,7 +71,15 @@
   }
   body {
     @apply bg-background text-foreground;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
+}
+
+/* Transições suaves para mudança de tema */
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
 }
 
 /* Custom scrollbar */

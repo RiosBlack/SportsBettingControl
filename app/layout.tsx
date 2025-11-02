@@ -29,9 +29,8 @@ html {
       <body suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="dark"
           enableSystem
-          disableTransitionOnChange
         >
           {children}
           <Toaster position="top-right" richColors />

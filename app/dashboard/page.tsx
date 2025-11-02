@@ -1,6 +1,5 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
-import { logout } from '@/lib/actions/auth'
 import {
   getUserStats,
   getRecentBets,
@@ -9,8 +8,6 @@ import { getBankrolls } from '@/lib/actions/bankroll'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
-  LogOut,
-  User,
   TrendingUp,
   Target,
   Wallet,
@@ -46,34 +43,9 @@ export default async function DashboardPage() {
   )
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto max-w-7xl p-4 md:p-6 lg:p-8">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold">Dashboard</h1>
-            <p className="text-muted-foreground mt-1">
-              Bem-vindo de volta, {session.user.name}!
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Link href="/dashboard/bets/new">
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
-                Nova Aposta
-              </Button>
-            </Link>
-            <form action={logout}>
-              <Button variant="outline" type="submit">
-                <LogOut className="mr-2 h-4 w-4" />
-                Sair
-              </Button>
-            </form>
-          </div>
-        </div>
-
-        {/* Period Stats */}
-        <PeriodStatsCard />
+    <div className="container mx-auto max-w-7xl p-4 md:p-6 lg:p-8">
+      {/* Period Stats */}
+      <PeriodStatsCard />
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
@@ -335,7 +307,6 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
         )}
-      </div>
     </div>
   )
 }
