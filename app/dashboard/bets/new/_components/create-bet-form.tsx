@@ -13,6 +13,7 @@ import { AlertCircle, Plus, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { MatchCombobox } from '@/components/match-combobox'
+import { DatePicker } from '@/components/date-picker'
 import type { Match } from '@/lib/types/matches'
 
 interface Bankroll {
@@ -34,18 +35,12 @@ interface CreateBetFormProps {
 export function CreateBetForm({ bankrolls, matches }: CreateBetFormProps) {
   const [eventValue, setEventValue] = useState('')
   const [competitionValue, setCompetitionValue] = useState('')
+  const [eventDate, setEventDate] = useState<Date>(new Date())
   const router = useRouter()
 
   const [state, formAction, pending] = useActionState(
     async (_: any, formData: FormData) => {
       try {
-        const eventDateStr = formData.get('eventDate') as string
-        
-        // Validar se a data foi preenchida
-        if (!eventDateStr) {
-          return { error: 'Data do evento é obrigatória' }
-        }
-
         const result = await createBet({
           bankrollId: formData.get('bankrollId') as string,
           sport: formData.get('sport') as any,
@@ -55,7 +50,7 @@ export function CreateBetForm({ bankrolls, matches }: CreateBetFormProps) {
           selection: formData.get('market') as string, // Usar o mesmo valor do mercado
           odds: Number(formData.get('odds')),
           stake: Number(formData.get('stake')),
-          eventDate: new Date(eventDateStr),
+          eventDate: eventDate,
           bookmaker: formData.get('bookmaker') as string || undefined,
           notes: formData.get('notes') as string || undefined,
           tags: [],
@@ -249,11 +244,9 @@ export function CreateBetForm({ bankrolls, matches }: CreateBetFormProps) {
             {/* Data do Evento */}
             <div className="space-y-2">
               <Label htmlFor="eventDate">Data do Evento *</Label>
-              <Input
-                id="eventDate"
-                name="eventDate"
-                type="datetime-local"
-                required
+              <DatePicker
+                value={eventDate}
+                onChange={(date) => setEventDate(date || new Date())}
                 disabled={pending}
               />
             </div>
