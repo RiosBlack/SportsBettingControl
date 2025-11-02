@@ -6,7 +6,7 @@ import { Toaster } from 'sonner'
 import { ThemeProvider } from '@/components/theme-provider'
 
 export const metadata: Metadata = {
-  title: 'Sports Betting Control - Controle suas Apostas',
+  title: 'Sports Betting',
   description: 'Sistema profissional de controle e gerenciamento de apostas esportivas',
 }
 

@@ -23,7 +23,7 @@ export async function AppSidebar() {
     <Sidebar>
       <SidebarHeader>
         <div className="flex flex-col gap-1 px-2 py-4">
-          <h2 className="text-lg font-semibold">Sports Betting</h2>
+          <h2 className="text-lg font-semibold">🎲 Sports Betting</h2>
           <p className="text-sm text-muted-foreground">{session.user.name}</p>
         </div>
       </SidebarHeader>
