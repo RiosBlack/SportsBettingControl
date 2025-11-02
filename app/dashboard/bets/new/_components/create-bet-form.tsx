@@ -134,12 +134,26 @@ export function CreateBetForm({ bankrolls }: CreateBetFormProps) {
             {/* Casa de Apostas */}
             <div className="space-y-2">
               <Label htmlFor="bookmaker">Casa de Apostas</Label>
-              <Input
-                id="bookmaker"
-                name="bookmaker"
-                placeholder="Ex: Bet365"
-                disabled={pending}
-              />
+              <Select name="bookmaker" disabled={pending}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Ex: Bet365" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Bet365">
+                    <span style={{ color: '#005340' }}>Bet365</span>
+                  </SelectItem>
+                  <SelectItem value="Superbet">
+                    <span style={{ color: '#E80105' }}>Superbet</span>
+                  </SelectItem>
+                  <SelectItem value="Betano">
+                    <span style={{ color: '#FF3D00' }}>Betano</span>
+                  </SelectItem>
+                  <SelectItem value="BetMGM">
+                    <span style={{ color: '#B19661' }}>BetMGM</span>
+                  </SelectItem>
+                  <SelectItem value="Outros">Outros</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
