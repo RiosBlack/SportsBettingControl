@@ -25,13 +25,15 @@ export async function middleware(request: NextRequest) {
   if (!token) {
     // Se estiver tentando acessar a raiz, redireciona para login
     if (pathname === "/") {
-      const loginUrl = new URL("/login", request.url);
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = "/login";
       return NextResponse.redirect(loginUrl);
     }
 
     // Se não for rota pública, redireciona para login
     if (!isPublicRoute) {
-      const loginUrl = new URL("/login", request.url);
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = "/login";
       loginUrl.searchParams.set("callbackUrl", pathname);
       return NextResponse.redirect(loginUrl);
     }
@@ -42,7 +44,8 @@ export async function middleware(request: NextRequest) {
 
   // Se estiver autenticado e tentar acessar login ou raiz, redireciona para dashboard
   if (pathname === "/login" || pathname === "/" || pathname === "/register") {
-    const dashboardUrl = new URL("/dashboard", request.url);
+    const dashboardUrl = request.nextUrl.clone();
+    dashboardUrl.pathname = "/dashboard";
     return NextResponse.redirect(dashboardUrl);
   }
 
