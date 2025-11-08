@@ -1,53 +1,26 @@
+import { auth } from "@/auth";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
 
-export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+export default auth((req) => {
+  const { pathname } = req.nextUrl;
+  const isLoggedIn = !!req.auth;
 
-  // Permitir rotas de autenticação do NextAuth
-  if (pathname.startsWith("/api/auth")) {
-    return NextResponse.next();
-  }
-
-  // Verificar se NEXTAUTH_SECRET está definido
-  if (!process.env.NEXTAUTH_SECRET) {
-    console.error("NEXTAUTH_SECRET não está definido!");
-    return NextResponse.next();
-  }
-
-  let token = null;
-  
-  try {
-    token = await getToken({
-      req: request,
-      secret: process.env.NEXTAUTH_SECRET,
-    });
-  } catch (error) {
-    console.error("Erro ao obter token:", error);
-    // Em caso de erro, trata como não autenticado
-    token = null;
-  }
-
-  // Lista de rotas públicas que não requerem autenticação
+  // Rotas públicas que não requerem autenticação
   const publicRoutes = ["/login", "/register"];
   const isPublicRoute = publicRoutes.some(
     (route) => pathname === route || pathname.startsWith(route + "/")
   );
 
-  // Se não estiver autenticado
-  if (!token) {
-    // Se estiver tentando acessar a raiz, redireciona para login
+  // Se não estiver logado
+  if (!isLoggedIn) {
+    // Se tentar acessar a raiz, redireciona para login
     if (pathname === "/") {
-      const loginUrl = request.nextUrl.clone();
-      loginUrl.pathname = "/login";
-      return NextResponse.redirect(loginUrl);
+      return NextResponse.redirect(new URL("/login", req.url));
     }
 
     // Se não for rota pública, redireciona para login
     if (!isPublicRoute) {
-      const loginUrl = request.nextUrl.clone();
-      loginUrl.pathname = "/login";
+      const loginUrl = new URL("/login", req.url);
       loginUrl.searchParams.set("callbackUrl", pathname);
       return NextResponse.redirect(loginUrl);
     }
@@ -56,32 +29,26 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Se estiver autenticado e tentar acessar login ou raiz, redireciona para dashboard
+  // Se estiver logado e tentar acessar login/register ou raiz, redireciona para dashboard
   if (pathname === "/login" || pathname === "/" || pathname === "/register") {
-    const dashboardUrl = request.nextUrl.clone();
-    dashboardUrl.pathname = "/dashboard";
-    return NextResponse.redirect(dashboardUrl);
+    return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
-  // Se estiver autenticado e acessar qualquer outra rota, permite o acesso
+  // Se estiver logado e acessar qualquer outra rota, permite o acesso
   return NextResponse.next();
-}
+});
 
 // Configuração das rotas que serão protegidas pelo middleware
 export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
-     * - api/auth (auth API routes)
+     * - api (API routes)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - public assets
+     * - public assets (arquivos em /public)
      */
-    "/",
-    "/dashboard/:path*",
-    "/api/:path*",
-    "/login",
-    "/register",
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.png$|.*\\.jpg$|.*\\.svg$).*)",
   ],
 };
