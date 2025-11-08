@@ -10,10 +10,24 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
+  // Verificar se NEXTAUTH_SECRET está definido
+  if (!process.env.NEXTAUTH_SECRET) {
+    console.error("NEXTAUTH_SECRET não está definido!");
+    return NextResponse.next();
+  }
+
+  let token = null;
+  
+  try {
+    token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET,
+    });
+  } catch (error) {
+    console.error("Erro ao obter token:", error);
+    // Em caso de erro, trata como não autenticado
+    token = null;
+  }
 
   // Lista de rotas públicas que não requerem autenticação
   const publicRoutes = ["/login", "/register"];
