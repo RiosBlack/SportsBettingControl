@@ -1,9 +1,20 @@
-import { auth } from "@/auth";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-export default auth((req) => {
-  const { pathname } = req.nextUrl;
-  const isLoggedIn = !!req.auth;
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Permitir todas as rotas de API
+  if (pathname.startsWith("/api")) {
+    return NextResponse.next();
+  }
+
+  // Verificar se tem sessão ativa (cookie do NextAuth)
+  const sessionToken = 
+    request.cookies.get("authjs.session-token")?.value ||
+    request.cookies.get("__Secure-authjs.session-token")?.value;
+
+  const isLoggedIn = !!sessionToken;
 
   // Rotas públicas que não requerem autenticação
   const publicRoutes = ["/login", "/register"];
@@ -15,12 +26,15 @@ export default auth((req) => {
   if (!isLoggedIn) {
     // Se tentar acessar a raiz, redireciona para login
     if (pathname === "/") {
-      return NextResponse.redirect(new URL("/login", req.url));
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = "/login";
+      return NextResponse.redirect(loginUrl);
     }
 
     // Se não for rota pública, redireciona para login
     if (!isPublicRoute) {
-      const loginUrl = new URL("/login", req.url);
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = "/login";
       loginUrl.searchParams.set("callbackUrl", pathname);
       return NextResponse.redirect(loginUrl);
     }
@@ -31,12 +45,14 @@ export default auth((req) => {
 
   // Se estiver logado e tentar acessar login/register ou raiz, redireciona para dashboard
   if (pathname === "/login" || pathname === "/" || pathname === "/register") {
-    return NextResponse.redirect(new URL("/dashboard", req.url));
+    const dashboardUrl = request.nextUrl.clone();
+    dashboardUrl.pathname = "/dashboard";
+    return NextResponse.redirect(dashboardUrl);
   }
 
   // Se estiver logado e acessar qualquer outra rota, permite o acesso
   return NextResponse.next();
-});
+}
 
 // Configuração das rotas que serão protegidas pelo middleware
 export const config = {
