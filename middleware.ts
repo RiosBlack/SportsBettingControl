@@ -9,10 +9,18 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Verificar se tem sessão ativa (cookie do NextAuth)
+  // Verificar se tem sessão ativa (cookie do NextAuth v5)
+  // NextAuth v5 pode usar diferentes nomes de cookie dependendo da configuração
   const sessionToken = 
     request.cookies.get("authjs.session-token")?.value ||
-    request.cookies.get("__Secure-authjs.session-token")?.value;
+    request.cookies.get("__Secure-authjs.session-token")?.value ||
+    request.cookies.get("next-auth.session-token")?.value ||
+    request.cookies.get("__Secure-next-auth.session-token")?.value;
+
+  // Log temporário para debug (remover depois)
+  if (pathname === "/login" && sessionToken) {
+    console.log("🔍 Cookie encontrado:", sessionToken.substring(0, 20) + "...");
+  }
 
   const isLoggedIn = !!sessionToken;
 
