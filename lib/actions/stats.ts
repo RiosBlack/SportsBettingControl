@@ -1,13 +1,13 @@
 "use server";
 
-import { auth } from "@/auth";
+import { getCurrentUser } from "@/lib/supabase/get-user";
 import { prisma } from "@/lib/prisma";
 
 // Estatísticas gerais do usuário
 export async function getUserStats() {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "Não autenticado" };
     }
 
@@ -34,7 +34,7 @@ export async function getUserStats() {
       prisma.bankroll.count({ where: { userId: session.user.id } }),
       prisma.bet.findMany({
         where: {
-          userId: session.user.id,
+          userId: user.dbUser.id,
           profit: { not: null },
         },
         select: { profit: true, stake: true },
@@ -59,7 +59,7 @@ export async function getUserStats() {
     // Calcular average odds (odds médio das apostas ganhas)
     const wonBetsWithOdds = await prisma.bet.findMany({
       where: {
-        userId: session.user.id,
+        userId: user.dbUser.id,
         status: "GANHA",
       },
       select: { odds: true },
@@ -96,8 +96,8 @@ export async function getUserStats() {
 // Estatísticas por esporte
 export async function getStatsBySport() {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "Não autenticado" };
     }
 
@@ -116,21 +116,21 @@ export async function getStatsBySport() {
         const [won, lost, pending] = await Promise.all([
           prisma.bet.count({
             where: {
-              userId: session.user.id,
+              userId: user.dbUser.id,
               sport: sport.sport,
               status: "GANHA",
             },
           }),
           prisma.bet.count({
             where: {
-              userId: session.user.id,
+              userId: user.dbUser.id,
               sport: sport.sport,
               status: "PERDIDA",
             },
           }),
           prisma.bet.count({
             where: {
-              userId: session.user.id,
+              userId: user.dbUser.id,
               sport: sport.sport,
               status: "PENDENTE",
             },
@@ -169,8 +169,8 @@ export async function getStatsBySport() {
 // Estatísticas mensais
 export async function getMonthlyStats(year?: number) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "Não autenticado" };
     }
 
@@ -180,7 +180,7 @@ export async function getMonthlyStats(year?: number) {
 
     const bets = await prisma.bet.findMany({
       where: {
-        userId: session.user.id,
+        userId: user.dbUser.id,
         eventDate: {
           gte: startDate,
           lte: endDate,
@@ -245,14 +245,14 @@ export async function getMonthlyStats(year?: number) {
 // Top apostas mais lucrativas
 export async function getTopProfitableBets(limit = 10) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "Não autenticado" };
     }
 
     const bets = await prisma.bet.findMany({
       where: {
-        userId: session.user.id,
+        userId: user.dbUser.id,
         profit: { not: null },
       },
       include: {
@@ -279,14 +279,14 @@ export async function getTopProfitableBets(limit = 10) {
 // Apostas recentes
 export async function getRecentBets(limit = 10) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "Não autenticado" };
     }
 
     const bets = await prisma.bet.findMany({
       where: {
-        userId: session.user.id,
+        userId: user.dbUser.id,
       },
       include: {
         bankroll: {
@@ -312,15 +312,15 @@ export async function getRecentBets(limit = 10) {
 // Estatísticas por período de datas
 export async function getStatsByDateRange(startDate: Date, endDate: Date) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "Não autenticado" };
     }
 
     // Buscar apostas finalizadas no período
     const bets = await prisma.bet.findMany({
       where: {
-        userId: session.user.id,
+        userId: user.dbUser.id,
         settledAt: {
           gte: startDate,
           lte: endDate,
@@ -406,15 +406,15 @@ export async function getStatsByDateRange(startDate: Date, endDate: Date) {
 // Estatísticas do bankroll
 export async function getBankrollStats(bankrollId: string) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "Não autenticado" };
     }
 
     const bankroll = await prisma.bankroll.findFirst({
       where: {
         id: bankrollId,
-        userId: session.user.id,
+        userId: user.dbUser.id,
       },
     });
 

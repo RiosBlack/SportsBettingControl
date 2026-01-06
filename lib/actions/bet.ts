@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/auth";
+import { getCurrentUser } from "@/lib/supabase/get-user";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import {
@@ -17,8 +17,8 @@ import {
 // Criar nova aposta
 export async function createBet(data: CreateBetInput) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "Não autenticado" };
     }
 
@@ -28,7 +28,7 @@ export async function createBet(data: CreateBetInput) {
     const bankroll = await prisma.bankroll.findFirst({
       where: {
         id: validatedData.bankrollId,
-        userId: session.user.id,
+        userId: user.dbUser.id,
       },
     });
 
@@ -105,8 +105,8 @@ export async function createBet(data: CreateBetInput) {
 // Buscar apostas com filtros
 export async function getBets(filters?: FilterBetsInput) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "Não autenticado" };
     }
 
@@ -184,15 +184,15 @@ export async function getBets(filters?: FilterBetsInput) {
 // Buscar aposta por ID
 export async function getBetById(id: string) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "Não autenticado" };
     }
 
     const bet = await prisma.bet.findFirst({
       where: {
         id,
-        userId: session.user.id,
+        userId: user.dbUser.id,
       },
       include: {
         bankroll: {
@@ -227,8 +227,8 @@ export async function getBetById(id: string) {
 // Atualizar aposta
 export async function updateBet(data: UpdateBetInput) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "Não autenticado" };
     }
 
@@ -238,7 +238,7 @@ export async function updateBet(data: UpdateBetInput) {
     const existingBet = await prisma.bet.findFirst({
       where: {
         id: validatedData.id,
-        userId: session.user.id,
+        userId: user.dbUser.id,
         status: "PENDENTE", // Só pode editar apostas pendentes
       },
     });
@@ -293,8 +293,8 @@ export async function updateBet(data: UpdateBetInput) {
 // Finalizar aposta (win/loss)
 export async function settleBet(data: SettleBetInput) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "Não autenticado" };
     }
 
@@ -304,7 +304,7 @@ export async function settleBet(data: SettleBetInput) {
     const existingBet = await prisma.bet.findFirst({
       where: {
         id: validatedData.id,
-        userId: session.user.id,
+        userId: user.dbUser.id,
       },
       include: {
         bankroll: true,
@@ -403,8 +403,8 @@ export async function settleBet(data: SettleBetInput) {
 // Deletar aposta
 export async function deleteBet(id: string) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "Não autenticado" };
     }
 
@@ -412,7 +412,7 @@ export async function deleteBet(id: string) {
     const existingBet = await prisma.bet.findFirst({
       where: {
         id,
-        userId: session.user.id,
+        userId: user.dbUser.id,
       },
     });
 

@@ -1,10 +1,10 @@
 'use server'
 
-import { signIn, signOut } from '@/auth'
+import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
-import bcrypt from 'bcryptjs'
-import { AuthError } from 'next-auth'
 import { z } from 'zod'
+import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 import { syncTodayMatches } from './matches'
 
 // Schemas de validação
@@ -41,29 +41,34 @@ export async function authenticate(
       }
     }
 
-    await signIn('credentials', {
+    const supabase = await createClient()
+
+    const { error } = await supabase.auth.signInWithPassword({
       email: validatedFields.data.email,
       password: validatedFields.data.password,
-      redirect: true,
-      redirectTo: '/dashboard',
     })
+
+    if (error) {
+      return {
+        message: 'Credenciais inválidas.',
+      }
+    }
 
     // Sincronizar jogos do dia em background (não bloqueia o login)
     syncTodayMatches().catch((error) => {
       console.error('Erro ao sincronizar jogos:', error)
     })
 
-    return { message: 'Login realizado com sucesso!' }
+    revalidatePath('/', 'layout')
+    redirect('/dashboard')
   } catch (error) {
-    if (error instanceof AuthError) {
-      switch (error.type) {
-        case 'CredentialsSignin':
-          return { message: 'Credenciais inválidas.' }
-        default:
-          return { message: 'Erro ao fazer login. Tente novamente.' }
-      }
+    // Redirect throws an error, so we need to catch it
+    if (error instanceof Error && error.message === 'NEXT_REDIRECT') {
+      throw error
     }
-    throw error
+    return {
+      message: 'Erro ao fazer login. Tente novamente.',
+    }
   }
 }
 
@@ -89,26 +94,42 @@ export async function register(
 
     const { name, email, password } = validatedFields.data
 
-    // Verificar se o usuário já existe
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
+    const supabase = await createClient()
+
+    // Criar usuário no Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name,
+        },
+      },
     })
 
-    if (existingUser) {
+    if (authError) {
+      if (authError.message.includes('already registered')) {
+        return {
+          message: 'Este email já está em uso.',
+        }
+      }
       return {
-        message: 'Este email já está em uso.',
+        message: authError.message || 'Erro ao criar conta.',
       }
     }
 
-    // Hash da senha
-    const hashedPassword = await bcrypt.hash(password, 10)
+    if (!authData.user) {
+      return {
+        message: 'Erro ao criar conta. Tente novamente.',
+      }
+    }
 
-    // Criar usuário
+    // Criar perfil do usuário no banco
     const user = await prisma.user.create({
       data: {
+        authId: authData.user.id,
         name,
         email,
-        password: hashedPassword,
       },
     })
 
@@ -122,16 +143,13 @@ export async function register(
       },
     })
 
-    // Fazer login automático após registro
-    await signIn('credentials', {
-      email,
-      password,
-      redirect: true,
-      redirectTo: '/dashboard',
-    })
-
-    return { message: 'Conta criada com sucesso!' }
+    revalidatePath('/', 'layout')
+    redirect('/dashboard')
   } catch (error) {
+    // Redirect throws an error, so we need to catch it
+    if (error instanceof Error && error.message === 'NEXT_REDIRECT') {
+      throw error
+    }
     return {
       message: 'Erro ao criar conta. Tente novamente.',
     }
@@ -140,11 +158,9 @@ export async function register(
 
 // Action de Logout
 export async function logout() {
-  await signOut({ redirectTo: '/login' })
-}
-
-// Action de Login com Google
-export async function signInWithGoogle() {
-  await signIn('google', { redirectTo: '/dashboard' })
+  const supabase = await createClient()
+  await supabase.auth.signOut()
+  revalidatePath('/', 'layout')
+  redirect('/login')
 }
 

@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/auth";
+import { getCurrentUser } from "@/lib/supabase/get-user";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import {
@@ -15,8 +15,8 @@ import {
 // Criar nova banca
 export async function createBankroll(data: CreateBankrollInput) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "Não autenticado" };
     }
 
@@ -24,7 +24,7 @@ export async function createBankroll(data: CreateBankrollInput) {
 
     const bankroll = await prisma.bankroll.create({
       data: {
-        userId: session.user.id,
+        userId: user.dbUser.id,
         name: validatedData.name,
         initialBalance: validatedData.initialBalance,
         currentBalance: validatedData.initialBalance,
@@ -52,14 +52,14 @@ export async function createBankroll(data: CreateBankrollInput) {
 // Buscar todas as bancas do usuário
 export async function getBankrolls() {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "Não autenticado" };
     }
 
     const bankrolls = await prisma.bankroll.findMany({
       where: {
-        userId: session.user.id,
+        userId: user.dbUser.id,
       },
       include: {
         _count: {
@@ -88,15 +88,15 @@ export async function getBankrolls() {
 // Buscar banca por ID
 export async function getBankrollById(id: string) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "Não autenticado" };
     }
 
     const bankroll = await prisma.bankroll.findFirst({
       where: {
         id,
-        userId: session.user.id,
+        userId: user.dbUser.id,
       },
       include: {
         _count: {
@@ -136,8 +136,8 @@ export async function getBankrollById(id: string) {
 // Atualizar banca
 export async function updateBankroll(data: UpdateBankrollInput) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "Não autenticado" };
     }
 
@@ -147,7 +147,7 @@ export async function updateBankroll(data: UpdateBankrollInput) {
     const existingBankroll = await prisma.bankroll.findFirst({
       where: {
         id: validatedData.id,
-        userId: session.user.id,
+        userId: user.dbUser.id,
       },
     });
 
@@ -183,8 +183,8 @@ export async function updateBankroll(data: UpdateBankrollInput) {
 // Atualizar saldo da banca
 export async function updateBankrollBalance(data: UpdateBankrollBalanceInput) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "Não autenticado" };
     }
 
@@ -194,7 +194,7 @@ export async function updateBankrollBalance(data: UpdateBankrollBalanceInput) {
     const existingBankroll = await prisma.bankroll.findFirst({
       where: {
         id: validatedData.id,
-        userId: session.user.id,
+        userId: user.dbUser.id,
       },
     });
 
@@ -250,8 +250,8 @@ export async function updateBankrollBalance(data: UpdateBankrollBalanceInput) {
 // Deletar banca
 export async function deleteBankroll(id: string) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "Não autenticado" };
     }
 
@@ -259,7 +259,7 @@ export async function deleteBankroll(id: string) {
     const existingBankroll = await prisma.bankroll.findFirst({
       where: {
         id,
-        userId: session.user.id,
+        userId: user.dbUser.id,
       },
       include: {
         _count: {
@@ -296,14 +296,14 @@ export async function deleteBankroll(id: string) {
 // Buscar banca ativa (principal)
 export async function getActiveBankroll() {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "Não autenticado" };
     }
 
     const bankroll = await prisma.bankroll.findFirst({
       where: {
-        userId: session.user.id,
+        userId: user.dbUser.id,
         isActive: true,
       },
       orderBy: {
