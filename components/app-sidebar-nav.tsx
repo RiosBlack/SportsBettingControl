@@ -7,13 +7,18 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { Home, Wallet, BarChart3, Plus } from "lucide-react";
+import { Home, Wallet, BarChart3, Plus, Calendar } from "lucide-react";
 
 const menuItems = [
   {
     title: "Dashboard",
     url: "/dashboard",
     icon: Home,
+  },
+  {
+    title: "Jogos do Dia",
+    url: "/dashboard/fixtures",
+    icon: Calendar,
   },
   {
     title: "Bancas",

@@ -14,9 +14,10 @@ datasource db {
 
 model User {
   id            String    @id @default(cuid())
-  authId        String?   @unique // UUID do Supabase Auth
+  authId        String?   @unique // Mantido para migração (opcional)
   name          String
   email         String    @unique
+  password      String?   // Senha hasheada (opcional para OAuth)
   emailVerified DateTime?
   image         String?
   createdAt     DateTime  @default(now())
@@ -123,4 +124,83 @@ enum BetResult {
   VOID // Anulada
   HALF_WIN // Meia vitória (Asian Handicap)
   HALF_LOSS // Meia derrota (Asian Handicap)
+}
+
+// ==================== JOGOS DO DIA ====================
+
+model Team {
+  id        String   @id @default(cuid())
+  apiId     Int      @unique // ID da API (API-Football ou API-Sports)
+  name      String
+  logo      String?
+  sport     Sport    @default(FUTEBOL)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relacionamentos
+  homeMatches Match[] @relation("HomeTeam")
+  awayMatches Match[] @relation("AwayTeam")
+
+  @@index([sport])
+  @@index([apiId])
+  @@map("teams")
+}
+
+model League {
+  id        String   @id @default(cuid())
+  apiId     Int      @unique // ID da API
+  name      String
+  logo      String?
+  country   String?
+  sport     Sport    @default(FUTEBOL)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relacionamentos
+  matches Match[]
+
+  @@index([sport])
+  @@index([apiId])
+  @@map("leagues")
+}
+
+model Match {
+  id         String   @id @default(cuid())
+  apiId      Int      @unique // ID da API
+  sport      Sport    @default(FUTEBOL)
+  date       DateTime @db.Date
+  time       String? // Horário local (HH:mm)
+  utcDate    DateTime // Data/hora UTC
+  status     String // NS, LIVE, FT, etc.
+  // Scores
+  homeScore  Int?
+  awayScore  Int?
+  // Relacionamentos
+  homeTeamId String
+  awayTeamId String
+  leagueId   String
+  // Timestamps
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relacionamentos
+  homeTeam Team   @relation("HomeTeam", fields: [homeTeamId], references: [id], onDelete: Cascade)
+  awayTeam Team   @relation("AwayTeam", fields: [awayTeamId], references: [id], onDelete: Cascade)
+  league   League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+
+  @@index([sport])
+  @@index([date])
+  @@index([status])
+  @@index([apiId])
+  @@map("matches")
+}
+
+model FixtureSync {
+  id        String   @id @default(cuid())
+  date      DateTime @unique @db.Date
+  syncedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("fixture_syncs")
 }

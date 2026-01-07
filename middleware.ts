@@ -1,11 +1,11 @@
-import { type NextRequest } from 'next/server'
-import { updateSession } from '@/lib/supabase/middleware'
+import { auth } from '@/auth'
+import { type NextRequest, NextResponse } from 'next/server'
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   
-  // Atualizar sessão do Supabase e obter usuário
-  const { supabaseResponse, user } = await updateSession(request)
+  // Obter sessão do NextAuth
+  const session = await auth()
 
   // Rotas públicas que não requerem autenticação
   const publicRoutes = ['/login', '/register']
@@ -14,12 +14,12 @@ export async function middleware(request: NextRequest) {
   )
 
   // Se não estiver logado
-  if (!user) {
+  if (!session?.user) {
     // Se tentar acessar a raiz, redireciona para login
     if (pathname === '/') {
       const loginUrl = request.nextUrl.clone()
       loginUrl.pathname = '/login'
-      return Response.redirect(loginUrl)
+      return NextResponse.redirect(loginUrl)
     }
 
     // Se não for rota pública, redireciona para login
@@ -27,22 +27,22 @@ export async function middleware(request: NextRequest) {
       const loginUrl = request.nextUrl.clone()
       loginUrl.pathname = '/login'
       loginUrl.searchParams.set('callbackUrl', pathname)
-      return Response.redirect(loginUrl)
+      return NextResponse.redirect(loginUrl)
     }
 
     // Se for rota pública, permite acesso
-    return supabaseResponse
+    return NextResponse.next()
   }
 
   // Se estiver logado e tentar acessar login/register ou raiz, redireciona para dashboard
   if (pathname === '/login' || pathname === '/' || pathname === '/register') {
     const dashboardUrl = request.nextUrl.clone()
     dashboardUrl.pathname = '/dashboard'
-    return Response.redirect(dashboardUrl)
+    return NextResponse.redirect(dashboardUrl)
   }
 
   // Se estiver logado e acessar qualquer outra rota, permite o acesso
-  return supabaseResponse
+  return NextResponse.next()
 }
 
 // Configuração das rotas que serão protegidas pelo middleware

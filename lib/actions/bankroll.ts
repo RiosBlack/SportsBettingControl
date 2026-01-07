@@ -1,6 +1,6 @@
 "use server";
 
-import { getCurrentUser } from "@/lib/supabase/get-user";
+import { getCurrentUser } from "@/lib/auth/get-user";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import {

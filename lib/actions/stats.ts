@@ -1,6 +1,6 @@
 "use server";
 
-import { getCurrentUser } from "@/lib/supabase/get-user";
+import { getCurrentUser } from "@/lib/auth/get-user";
 import { prisma } from "@/lib/prisma";
 
 // Estatísticas gerais do usuário
@@ -20,18 +20,18 @@ export async function getUserStats() {
       totalBankrolls,
       allBets,
     ] = await Promise.all([
-      prisma.bet.count({ where: { userId: session.user.id } }),
-      prisma.bet.count({ where: { userId: session.user.id, status: "GANHA" } }),
+      prisma.bet.count({ where: { userId: user.dbUser.id } }),
+      prisma.bet.count({ where: { userId: user.dbUser.id, status: "GANHA" } }),
       prisma.bet.count({
-        where: { userId: session.user.id, status: "PERDIDA" },
+        where: { userId: user.dbUser.id, status: "PERDIDA" },
       }),
       prisma.bet.count({
-        where: { userId: session.user.id, status: "ANULADA" },
+        where: { userId: user.dbUser.id, status: "ANULADA" },
       }),
       prisma.bet.count({
-        where: { userId: session.user.id, status: "PENDENTE" },
+        where: { userId: user.dbUser.id, status: "PENDENTE" },
       }),
-      prisma.bankroll.count({ where: { userId: session.user.id } }),
+      prisma.bankroll.count({ where: { userId: user.dbUser.id } }),
       prisma.bet.findMany({
         where: {
           userId: user.dbUser.id,
@@ -103,7 +103,7 @@ export async function getStatsBySport() {
 
     const sports = await prisma.bet.groupBy({
       by: ["sport"],
-      where: { userId: session.user.id },
+      where: { userId: user.dbUser.id },
       _count: { id: true },
       _sum: {
         profit: true,

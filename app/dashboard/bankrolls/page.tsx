@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { getBankrolls } from '@/lib/actions/bankroll'
 import { BankrollsList } from './_components/bankrolls-list'
@@ -7,13 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Wallet } from 'lucide-react'
 
 export default async function BankrollsPage() {
-  const supabase = await createClient()
-  
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const session = await auth()
 
-  if (!user) {
+  if (!session?.user) {
     redirect('/login')
   }
 

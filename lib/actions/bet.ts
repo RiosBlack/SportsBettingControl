@@ -1,6 +1,6 @@
 "use server";
 
-import { getCurrentUser } from "@/lib/supabase/get-user";
+import { getCurrentUser } from "@/lib/auth/get-user";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import {
@@ -46,7 +46,7 @@ export async function createBet(data: CreateBetInput) {
       // Criar aposta
       const bet = await tx.bet.create({
         data: {
-          userId: session.user.id!,
+          userId: user.dbUser.id,
           bankrollId: validatedData.bankrollId,
           sport: validatedData.sport,
           event: validatedData.event,
@@ -113,7 +113,7 @@ export async function getBets(filters?: FilterBetsInput) {
     const validatedFilters = filters ? FilterBetsSchema.parse(filters) : {};
 
     const where: any = {
-      userId: session.user.id,
+      userId: user.dbUser.id,
     };
 
     if (validatedFilters.bankrollId) {

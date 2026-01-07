@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { getBankrolls } from '@/lib/actions/bankroll'
 import { getTodayMatches } from '@/lib/actions/matches'
@@ -8,13 +8,9 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
 export default async function NewBetPage() {
-  const supabase = await createClient()
-  
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const session = await auth()
 
-  if (!user) {
+  if (!session?.user) {
     redirect('/login')
   }
 

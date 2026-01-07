@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import {
   getUserStats,
@@ -21,13 +21,9 @@ import { Badge } from '@/components/ui/badge'
 import PeriodStatsCard from './_components/period-stats-card'
 
 export default async function DashboardPage() {
-  const supabase = await createClient()
-  
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const session = await auth()
 
-  if (!user) {
+  if (!session?.user) {
     redirect('/login')
   }
 

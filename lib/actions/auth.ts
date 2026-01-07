@@ -1,10 +1,11 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { signIn, signOut } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import bcrypt from 'bcryptjs'
 import { syncTodayMatches } from './matches'
 
 // Schemas de validação
@@ -41,22 +42,30 @@ export async function authenticate(
       }
     }
 
-    const supabase = await createClient()
+    const { email, password } = validatedFields.data
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: validatedFields.data.email,
-      password: validatedFields.data.password,
-    })
-
-    if (error) {
+    // Tentar fazer login com NextAuth
+    try {
+      await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      })
+    } catch (error: any) {
+      // NextAuth v5 lança erro se as credenciais forem inválidas
+      if (error?.cause?.err?.message === 'CredentialsSignin') {
+        return {
+          message: 'Credenciais inválidas.',
+        }
+      }
       return {
         message: 'Credenciais inválidas.',
       }
     }
 
     // Sincronizar jogos do dia em background (não bloqueia o login)
-    syncTodayMatches().catch((error) => {
-      console.error('Erro ao sincronizar jogos:', error)
+    syncTodayMatches().catch(() => {
+      // Erro silencioso - não bloqueia o login
     })
 
     revalidatePath('/', 'layout')
@@ -94,42 +103,26 @@ export async function register(
 
     const { name, email, password } = validatedFields.data
 
-    const supabase = await createClient()
-
-    // Criar usuário no Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          name,
-        },
-      },
+    // Verificar se o email já existe
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
     })
 
-    if (authError) {
-      if (authError.message.includes('already registered')) {
-        return {
-          message: 'Este email já está em uso.',
-        }
-      }
+    if (existingUser) {
       return {
-        message: authError.message || 'Erro ao criar conta.',
+        message: 'Este email já está em uso.',
       }
     }
 
-    if (!authData.user) {
-      return {
-        message: 'Erro ao criar conta. Tente novamente.',
-      }
-    }
+    // Hash da senha
+    const hashedPassword = await bcrypt.hash(password, 10)
 
-    // Criar perfil do usuário no banco
+    // Criar usuário no banco
     const user = await prisma.user.create({
       data: {
-        authId: authData.user.id,
         name,
         email,
+        password: hashedPassword,
       },
     })
 
@@ -142,6 +135,17 @@ export async function register(
         currentBalance: 0,
       },
     })
+
+    // Fazer login automático após registro
+    try {
+      await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      })
+    } catch (error) {
+      // Se o login falhar, redireciona mesmo assim (usuário foi criado)
+    }
 
     revalidatePath('/', 'layout')
     redirect('/dashboard')
@@ -158,9 +162,6 @@ export async function register(
 
 // Action de Logout
 export async function logout() {
-  const supabase = await createClient()
-  await supabase.auth.signOut()
+  await signOut({ redirectTo: '/login' })
   revalidatePath('/', 'layout')
-  redirect('/login')
 }
-
