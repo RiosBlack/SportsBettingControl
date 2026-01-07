@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { syncDailyFixtures } from "@/lib/actions/fixtures";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const result = await syncDailyFixtures();
+    // Permitir forçar sincronização via query parameter ?force=true
+    const { searchParams } = new URL(request.url);
+    const force = searchParams.get("force") === "true";
+
+    const result = await syncDailyFixtures(force);
 
     if (!result.success) {
       return NextResponse.json(
@@ -26,4 +30,3 @@ export async function GET() {
     );
   }
 }
-

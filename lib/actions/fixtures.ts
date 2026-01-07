@@ -28,7 +28,10 @@ export async function shouldSyncToday(): Promise<boolean> {
 }
 
 // Buscar jogos de futebol da API-Football v3
-async function fetchFootballFixtures(date: string): Promise<ApiFootballResponse | null> {
+// Retorna TODOS os jogos do dia, incluindo finalizados (FT), em andamento (LIVE) e não iniciados (NS)
+async function fetchFootballFixtures(
+  date: string
+): Promise<ApiFootballResponse | null> {
   try {
     const apiKey = process.env.API_FOOTBALL_KEY;
 
@@ -37,6 +40,8 @@ async function fetchFootballFixtures(date: string): Promise<ApiFootballResponse 
       return null;
     }
 
+    // Buscar todos os jogos do dia sem filtro de status
+    // A API retorna todos os jogos quando apenas o parâmetro date é fornecido
     const response = await fetch(
       `https://v3.football.api-sports.io/fixtures?date=${date}`,
       {
@@ -64,7 +69,9 @@ async function fetchFootballFixtures(date: string): Promise<ApiFootballResponse 
 
 // Buscar jogos de basquete da API-Sports (apenas NBA)
 // NBA league ID: 12
-async function fetchBasketballGames(date: string): Promise<ApiBasketballResponse | null> {
+async function fetchBasketballGames(
+  date: string
+): Promise<ApiBasketballResponse | null> {
   try {
     const apiKey = process.env.API_SPORTS_KEY;
 
@@ -100,11 +107,17 @@ async function fetchBasketballGames(date: string): Promise<ApiBasketballResponse
 }
 
 // Processar e salvar jogos de futebol
+// Processa TODOS os jogos retornados pela API, sem filtros
 async function processFootballFixtures(
   data: ApiFootballResponse
 ): Promise<number> {
   let count = 0;
+  let errorCount = 0;
 
+  // Log para debug: quantos jogos foram retornados pela API
+  const totalFixtures = data.response.length;
+
+  // Processar TODOS os jogos retornados (sem filtros)
   for (const fixture of data.response) {
     try {
       // Upsert League
@@ -196,8 +209,21 @@ async function processFootballFixtures(
 
       count++;
     } catch (error) {
-      console.error(`Error processing football fixture ${fixture.fixture.id}:`, error);
+      errorCount++;
+      console.error(
+        `Error processing football fixture ${fixture.fixture.id}:`,
+        error
+      );
+      // Continuar processando os demais jogos mesmo se houver erro
     }
+  }
+
+  if (errorCount > 0) {
+    console.error(
+      `Processed ${count} fixtures out of ${totalFixtures}, ${errorCount} errors`
+    );
+  } else {
+    console.log(`Successfully processed all ${count} fixtures`);
   }
 
   return count;
@@ -271,10 +297,12 @@ async function processBasketballGames(
       matchDate.setHours(0, 0, 0, 0);
 
       // Extract time
-      const time = game.time || utcDate.toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+      const time =
+        game.time ||
+        utcDate.toLocaleTimeString("pt-BR", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
 
       // Get scores
       const homeScore = game.scores.home.total;
@@ -319,30 +347,35 @@ async function processBasketballGames(
 }
 
 // Sincronizar jogos do dia
-export async function syncDailyFixtures(): Promise<SyncFixturesResult> {
+// Sempre busca e atualiza os jogos para garantir que todos sejam salvos
+export async function syncDailyFixtures(
+  force: boolean = false
+): Promise<SyncFixturesResult> {
   try {
-    // Verificar se já foi sincronizado hoje
-    const needsSync = await shouldSyncToday();
-    if (!needsSync) {
-      return {
-        success: true,
-        footballCount: 0,
-        basketballCount: 0,
-        syncedAt: new Date(),
-      };
-    }
-
     const today = new Date().toISOString().split("T")[0];
     const todayDate = new Date();
     todayDate.setHours(0, 0, 0, 0);
 
-    // Buscar jogos de futebol
+    // Verificar se já foi sincronizado hoje (a menos que force seja true)
+    if (!force) {
+      const needsSync = await shouldSyncToday();
+      if (!needsSync) {
+        return {
+          success: true,
+          footballCount: 0,
+          basketballCount: 0,
+          syncedAt: new Date(),
+        };
+      }
+    }
+
+    // Buscar TODOS os jogos de futebol do dia
     const footballData = await fetchFootballFixtures(today);
     const footballCount = footballData
       ? await processFootballFixtures(footballData)
       : 0;
 
-    // Buscar jogos de basquete
+    // Buscar jogos de basquete (apenas NBA)
     const basketballData = await fetchBasketballGames(today);
     const basketballCount = basketballData
       ? await processBasketballGames(basketballData)
@@ -374,23 +407,47 @@ export async function syncDailyFixtures(): Promise<SyncFixturesResult> {
 }
 
 // Buscar jogos do dia do banco
-export async function getTodayFixtures(sport?: "FUTEBOL" | "BASQUETE"): Promise<{
+// Retorna TODOS os jogos do dia, incluindo finalizados, sem filtro de status
+export async function getTodayFixtures(
+  sport?: "FUTEBOL" | "BASQUETE",
+  targetDate?: Date
+): Promise<{
   success: boolean;
   data?: Fixture[];
   error?: string;
 }> {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Usar a data fornecida ou hoje como padrão
+    const searchDate = targetDate ? new Date(targetDate) : new Date();
+
+    // Criar data em UTC para evitar problemas de timezone
+    const dateUTC = new Date(
+      Date.UTC(
+        searchDate.getUTCFullYear(),
+        searchDate.getUTCMonth(),
+        searchDate.getUTCDate(),
+        0,
+        0,
+        0,
+        0
+      )
+    );
+
+    // Também buscar por data local (caso os jogos tenham sido salvos com timezone local)
+    const dateLocal = new Date(searchDate);
+    dateLocal.setHours(0, 0, 0, 0);
 
     const where: any = {
-      date: today,
+      OR: [{ date: dateUTC }, { date: dateLocal }],
+      // Não filtrar por status - retornar todos os jogos (NS, LIVE, FT, etc.)
     };
 
     if (sport) {
       where.sport = sport;
     }
 
+    // Buscar todos os jogos do dia sem filtro de status
+    // Remover qualquer limite implícito
     const matches = await prisma.match.findMany({
       where,
       include: {
@@ -401,9 +458,19 @@ export async function getTodayFixtures(sport?: "FUTEBOL" | "BASQUETE"): Promise<
       orderBy: {
         utcDate: "asc",
       },
+      // Não usar take/limit - buscar TODOS os jogos
     });
 
-    const fixtures: Fixture[] = matches.map((match) => ({
+    // Log para debug
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        `Found ${matches.length} matches for date ${
+          dateUTC.toISOString().split("T")[0]
+        }`
+      );
+    }
+
+    const fixtures: Fixture[] = matches.map((match: any) => ({
       id: match.id,
       apiId: match.apiId,
       sport: match.sport as "FUTEBOL" | "BASQUETE",
@@ -446,4 +513,3 @@ export async function getTodayFixtures(sport?: "FUTEBOL" | "BASQUETE"): Promise<
     };
   }
 }
-
