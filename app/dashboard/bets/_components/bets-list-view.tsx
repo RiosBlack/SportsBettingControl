@@ -32,7 +32,10 @@ interface Bet {
   id: string
   event: string
   sport: string
-  market: string
+  market: {
+    id: string
+    name: string
+  }
   selection: string
   odds: number
   stake: number
@@ -61,7 +64,7 @@ export function BetsListView({ bets }: BetsListViewProps) {
     const matchesFilter = filter === 'all' || bet.status === filter
     const matchesSearch =
       bet.event.toLowerCase().includes(search.toLowerCase()) ||
-      bet.market.toLowerCase().includes(search.toLowerCase()) ||
+      bet.market.name.toLowerCase().includes(search.toLowerCase()) ||
       (bet.bookmaker?.toLowerCase() || '').includes(search.toLowerCase())
     return matchesFilter && matchesSearch
   })
@@ -196,7 +199,7 @@ export function BetsListView({ bets }: BetsListViewProps) {
                     <TableCell>{bet.sport}</TableCell>
                     <TableCell>
                       <div>
-                        <p className="text-sm">{bet.market}</p>
+                        <p className="text-sm">{bet.market.name}</p>
                         <p className="text-xs text-muted-foreground">{bet.selection}</p>
                       </div>
                     </TableCell>

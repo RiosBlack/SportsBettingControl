@@ -14,6 +14,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { MatchCombobox } from '@/components/match-combobox'
 import { DatePicker } from '@/components/date-picker'
+import { MarketSelect } from './market-select'
 import type { Match } from '@/lib/types/matches'
 
 interface Bankroll {
@@ -36,6 +37,7 @@ export function CreateBetForm({ bankrolls, matches }: CreateBetFormProps) {
   const [eventValue, setEventValue] = useState('')
   const [competitionValue, setCompetitionValue] = useState('')
   const [eventDate, setEventDate] = useState<Date>(new Date())
+  const [marketId, setMarketId] = useState<string>('')
   const router = useRouter()
 
   const [state, formAction, pending] = useActionState(
@@ -46,8 +48,8 @@ export function CreateBetForm({ bankrolls, matches }: CreateBetFormProps) {
           sport: formData.get('sport') as any,
           event: formData.get('event') as string,
           competition: formData.get('competition') as string || undefined,
-          market: formData.get('market') as string,
-          selection: formData.get('market') as string, // Usar o mesmo valor do mercado
+          marketId: marketId || (formData.get('marketId') as string),
+          selection: formData.get('selection') as string,
           odds: Number(formData.get('odds')),
           stake: Number(formData.get('stake')),
           eventDate: eventDate,
@@ -200,11 +202,23 @@ export function CreateBetForm({ bankrolls, matches }: CreateBetFormProps) {
 
           {/* Mercado */}
           <div className="space-y-2">
-            <Label htmlFor="market">Mercado *</Label>
+            <Label htmlFor="marketId">Mercado *</Label>
+            <MarketSelect
+              value={marketId}
+              onValueChange={setMarketId}
+              disabled={pending}
+              required
+            />
+            <input type="hidden" name="marketId" value={marketId} required />
+          </div>
+
+          {/* Seleção */}
+          <div className="space-y-2">
+            <Label htmlFor="selection">Seleção *</Label>
             <Input
-              id="market"
-              name="market"
-              placeholder="Ex: Resultado Final"
+              id="selection"
+              name="selection"
+              placeholder="Ex: Flamengo, Over 2.5, Sim"
               required
               disabled={pending}
             />

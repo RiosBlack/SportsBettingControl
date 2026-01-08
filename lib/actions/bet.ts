@@ -51,7 +51,7 @@ export async function createBet(data: CreateBetInput) {
           sport: validatedData.sport,
           event: validatedData.event,
           competition: validatedData.competition,
-          market: validatedData.market,
+          marketId: validatedData.marketId,
           selection: validatedData.selection,
           odds: validatedData.odds,
           stake: validatedData.stake,
@@ -65,6 +65,12 @@ export async function createBet(data: CreateBetInput) {
             select: {
               name: true,
               currency: true,
+            },
+          },
+          market: {
+            select: {
+              id: true,
+              name: true,
             },
           },
         },
@@ -148,6 +154,12 @@ export async function getBets(filters?: FilterBetsInput) {
               currency: true,
             },
           },
+          market: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
         orderBy: {
           placedAt: "desc",
@@ -202,6 +214,12 @@ export async function getBetById(id: string) {
             currency: true,
           },
         },
+        market: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
 
@@ -247,26 +265,37 @@ export async function updateBet(data: UpdateBetInput) {
       return { error: "Aposta não encontrada ou já foi finalizada" };
     }
 
+    const updateData: any = {
+      sport: validatedData.sport,
+      event: validatedData.event,
+      competition: validatedData.competition,
+      selection: validatedData.selection,
+      odds: validatedData.odds,
+      stake: validatedData.stake,
+      eventDate: validatedData.eventDate,
+      bookmaker: validatedData.bookmaker,
+      notes: validatedData.notes,
+      tags: validatedData.tags,
+    };
+
+    if (validatedData.marketId) {
+      updateData.marketId = validatedData.marketId;
+    }
+
     const bet = await prisma.bet.update({
       where: { id: validatedData.id },
-      data: {
-        sport: validatedData.sport,
-        event: validatedData.event,
-        competition: validatedData.competition,
-        market: validatedData.market,
-        selection: validatedData.selection,
-        odds: validatedData.odds,
-        stake: validatedData.stake,
-        eventDate: validatedData.eventDate,
-        bookmaker: validatedData.bookmaker,
-        notes: validatedData.notes,
-        tags: validatedData.tags,
-      },
+      data: updateData,
       include: {
         bankroll: {
           select: {
             name: true,
             currency: true,
+          },
+        },
+        market: {
+          select: {
+            id: true,
+            name: true,
           },
         },
       },
@@ -361,6 +390,12 @@ export async function settleBet(data: SettleBetInput) {
             select: {
               name: true,
               currency: true,
+            },
+          },
+          market: {
+            select: {
+              id: true,
+              name: true,
             },
           },
         },

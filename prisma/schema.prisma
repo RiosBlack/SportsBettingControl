@@ -51,6 +51,20 @@ model Bankroll {
   @@map("bankrolls")
 }
 
+// ==================== MERCADOS ====================
+
+model Market {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relacionamentos
+  bets Bet[]
+
+  @@map("markets")
+}
+
 // ==================== APOSTAS ====================
 
 model Bet {
@@ -61,7 +75,7 @@ model Bet {
   sport       Sport      @default(FUTEBOL)
   event       String // Nome do evento (ex: "Flamengo x Palmeiras")
   competition String? // Campeonato/Liga
-  market      String // Tipo de mercado (ex: "Resultado Final", "Over/Under", "Ambas Marcam")
+  marketId    String? // Referência ao mercado cadastrado (nullable temporariamente para migração)
   selection   String // Seleção escolhida (ex: "Flamengo", "Over 2.5", "Sim")
   odds        Decimal    @db.Decimal(10, 2) // Cotação da aposta
   stake       Decimal    @db.Decimal(10, 2) // Valor apostado
@@ -83,9 +97,11 @@ model Bet {
   // Relacionamentos
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   bankroll Bankroll @relation(fields: [bankrollId], references: [id], onDelete: Cascade)
+  market   Market?  @relation(fields: [marketId], references: [id], onDelete: Restrict)
 
   @@index([userId])
   @@index([bankrollId])
+  @@index([marketId])
   @@index([status])
   @@index([sport])
   @@index([eventDate])

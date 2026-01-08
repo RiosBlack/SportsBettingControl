@@ -295,6 +295,12 @@ export async function getRecentBets(limit = 10) {
             currency: true,
           },
         },
+        market: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
       orderBy: {
         placedAt: "desc",

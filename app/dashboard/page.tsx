@@ -246,7 +246,7 @@ export default async function DashboardPage() {
                             </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            {bet.market} • Odd {Number(bet.odds).toFixed(2)}
+                            {bet.market?.name || 'Mercado não encontrado'} • Odd {Number(bet.odds).toFixed(2)}
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">
                             {new Date(bet.placedAt).toLocaleDateString('pt-BR')}

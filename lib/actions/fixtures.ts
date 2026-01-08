@@ -169,8 +169,15 @@ async function processFootballFixtures(
 
       // Parse date
       const utcDate = new Date(fixture.fixture.date);
-      const matchDate = new Date(utcDate);
-      matchDate.setHours(0, 0, 0, 0);
+      
+      // Criar data de jogo usando apenas a parte da data (YYYY-MM-DD) em UTC
+      // e converter para data local sem horas para evitar problemas de timezone
+      const utcYear = utcDate.getUTCFullYear();
+      const utcMonth = utcDate.getUTCMonth();
+      const utcDay = utcDate.getUTCDate();
+      
+      // Criar data local com a mesma data (sem considerar timezone)
+      const matchDate = new Date(utcYear, utcMonth, utcDay, 0, 0, 0, 0);
 
       // Extract time
       const time = utcDate.toLocaleTimeString("pt-BR", {
@@ -291,10 +298,17 @@ async function processBasketballGames(
       const utcDate = new Date(game.date);
       if (game.time) {
         const [hours, minutes] = game.time.split(":").map(Number);
-        utcDate.setHours(hours, minutes, 0, 0);
+        utcDate.setUTCHours(hours, minutes, 0, 0);
       }
-      const matchDate = new Date(utcDate);
-      matchDate.setHours(0, 0, 0, 0);
+      
+      // Criar data de jogo usando apenas a parte da data (YYYY-MM-DD) em UTC
+      // e converter para data local sem horas para evitar problemas de timezone
+      const utcYear = utcDate.getUTCFullYear();
+      const utcMonth = utcDate.getUTCMonth();
+      const utcDay = utcDate.getUTCDate();
+      
+      // Criar data local com a mesma data (sem considerar timezone)
+      const matchDate = new Date(utcYear, utcMonth, utcDay, 0, 0, 0, 0);
 
       // Extract time
       const time =
@@ -420,25 +434,23 @@ export async function getTodayFixtures(
     // Usar a data fornecida ou hoje como padrão
     const searchDate = targetDate ? new Date(targetDate) : new Date();
 
-    // Criar data em UTC para evitar problemas de timezone
-    const dateUTC = new Date(
-      Date.UTC(
-        searchDate.getUTCFullYear(),
-        searchDate.getUTCMonth(),
-        searchDate.getUTCDate(),
-        0,
-        0,
-        0,
-        0
-      )
-    );
+    // Extrair ano, mês e dia da data de busca usando UTC (mesma lógica usada ao salvar)
+    // Isso garante que a busca seja feita pela data correta, independente do timezone
+    const utcYear = searchDate.getUTCFullYear();
+    const utcMonth = searchDate.getUTCMonth();
+    const utcDay = searchDate.getUTCDate();
 
-    // Também buscar por data local (caso os jogos tenham sido salvos com timezone local)
-    const dateLocal = new Date(searchDate);
-    dateLocal.setHours(0, 0, 0, 0);
+    // Criar data local com a mesma data UTC (mesma lógica usada ao salvar)
+    const searchDateLocal = new Date(utcYear, utcMonth, utcDay, 0, 0, 0, 0);
+    
+    // Também buscar por data UTC equivalente (para jogos salvos antes da correção)
+    const searchDateUTC = new Date(Date.UTC(utcYear, utcMonth, utcDay, 0, 0, 0, 0));
 
     const where: any = {
-      OR: [{ date: dateUTC }, { date: dateLocal }],
+      OR: [
+        { date: searchDateLocal },
+        { date: searchDateUTC }
+      ],
       // Não filtrar por status - retornar todos os jogos (NS, LIVE, FT, etc.)
     };
 
@@ -464,9 +476,7 @@ export async function getTodayFixtures(
     // Log para debug
     if (process.env.NODE_ENV === "development") {
       console.log(
-        `Found ${matches.length} matches for date ${
-          dateUTC.toISOString().split("T")[0]
-        }`
+        `Found ${matches.length} matches for date ${utcYear}-${String(utcMonth + 1).padStart(2, "0")}-${String(utcDay).padStart(2, "0")} (searchDateLocal: ${searchDateLocal.toISOString().split("T")[0]}, searchDateUTC: ${searchDateUTC.toISOString().split("T")[0]})`
       );
     }
 

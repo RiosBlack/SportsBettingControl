@@ -37,7 +37,7 @@ export const CreateBetSchema = z.object({
   sport: SportEnum.default('FUTEBOL'),
   event: z.string().min(3, 'Nome do evento deve ter no mínimo 3 caracteres'),
   competition: z.string().optional(),
-  market: z.string().min(3, 'Mercado é obrigatório'),
+  marketId: z.string({ required_error: 'Mercado é obrigatório' }),
   selection: z.string().min(1, 'Seleção é obrigatória'),
   odds: z.coerce
     .number({ required_error: 'Cotação é obrigatória' })
@@ -59,7 +59,7 @@ export const UpdateBetSchema = z.object({
   sport: SportEnum.optional(),
   event: z.string().min(3).optional(),
   competition: z.string().optional(),
-  market: z.string().min(3).optional(),
+  marketId: z.string().min(1).optional(),
   selection: z.string().min(1).optional(),
   odds: z.coerce.number().positive().min(1.01).max(1000).optional(),
   stake: z.coerce.number().positive().max(1000000).optional(),
