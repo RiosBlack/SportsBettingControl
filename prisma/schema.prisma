@@ -24,8 +24,10 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   // Relacionamentos
-  bankrolls Bankroll[]
-  bets      Bet[]
+  bankrolls       Bankroll[]
+  bets            Bet[]
+  favoriteLeagues FavoriteLeague[]
+  favoriteTeams   FavoriteTeam[]
 
   @@map("users")
 }
@@ -44,8 +46,9 @@ model Bankroll {
   updatedAt      DateTime @updatedAt
 
   // Relacionamentos
-  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bets Bet[]
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bets         Bet[]
+  transactions Transaction[]
 
   @@index([userId])
   @@map("bankrolls")
@@ -154,8 +157,9 @@ model Team {
   updatedAt DateTime @updatedAt
 
   // Relacionamentos
-  homeMatches Match[] @relation("HomeTeam")
-  awayMatches Match[] @relation("AwayTeam")
+  homeMatches   Match[]         @relation("HomeTeam")
+  awayMatches   Match[]         @relation("AwayTeam")
+  favoriteTeams FavoriteTeam[]
 
   @@index([sport])
   @@index([apiId])
@@ -173,7 +177,8 @@ model League {
   updatedAt DateTime @updatedAt
 
   // Relacionamentos
-  matches Match[]
+  matches         Match[]
+  favoriteLeagues FavoriteLeague[]
 
   @@index([sport])
   @@index([apiId])
@@ -219,4 +224,61 @@ model FixtureSync {
   updatedAt DateTime @updatedAt
 
   @@map("fixture_syncs")
+}
+
+// ==================== TRANSAÇÕES DE BANCA ====================
+
+enum TransactionType {
+  DEPOSIT  // Depósito (entrada)
+  WITHDRAW // Saque (saída)
+}
+
+model Transaction {
+  id          String          @id @default(cuid())
+  bankrollId  String
+  type        TransactionType
+  amount      Decimal         @db.Decimal(10, 2)
+  description String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  // Relacionamentos
+  bankroll Bankroll @relation(fields: [bankrollId], references: [id], onDelete: Cascade)
+
+  @@index([bankrollId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("transactions")
+}
+
+// ==================== FAVORITOS ====================
+
+model FavoriteLeague {
+  id        String   @id @default(cuid())
+  userId    String
+  leagueId  String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, leagueId])
+  @@index([userId])
+  @@index([leagueId])
+  @@map("favorite_leagues")
+}
+
+model FavoriteTeam {
+  id        String   @id @default(cuid())
+  userId    String
+  teamId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, teamId])
+  @@index([userId])
+  @@index([teamId])
+  @@map("favorite_teams")
 }

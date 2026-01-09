@@ -266,16 +266,16 @@ export async function updateBet(data: UpdateBetInput) {
     }
 
     const updateData: any = {
-      sport: validatedData.sport,
-      event: validatedData.event,
-      competition: validatedData.competition,
-      selection: validatedData.selection,
-      odds: validatedData.odds,
-      stake: validatedData.stake,
-      eventDate: validatedData.eventDate,
-      bookmaker: validatedData.bookmaker,
-      notes: validatedData.notes,
-      tags: validatedData.tags,
+        sport: validatedData.sport,
+        event: validatedData.event,
+        competition: validatedData.competition,
+        selection: validatedData.selection,
+        odds: validatedData.odds,
+        stake: validatedData.stake,
+        eventDate: validatedData.eventDate,
+        bookmaker: validatedData.bookmaker,
+        notes: validatedData.notes,
+        tags: validatedData.tags,
     };
 
     if (validatedData.marketId) {

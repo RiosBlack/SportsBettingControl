@@ -1,8 +1,10 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { getBankrolls } from '@/lib/actions/bankroll'
+import { getAllTransactions } from '@/lib/actions/transaction'
 import { BankrollsList } from './_components/bankrolls-list'
 import { CreateBankrollDialog } from './_components/create-bankroll-dialog'
+import { TransactionsList } from './_components/transactions-list'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Wallet } from 'lucide-react'
 
@@ -13,8 +15,12 @@ export default async function BankrollsPage() {
     redirect('/login')
   }
 
-  const bankrollsResult = await getBankrolls()
+  const [bankrollsResult, transactionsResult] = await Promise.all([
+    getBankrolls(),
+    getAllTransactions(),
+  ])
   const bankrolls = bankrollsResult.data || []
+  const transactions = transactionsResult.success && transactionsResult.data ? transactionsResult.data : []
 
   const totalBalance = bankrolls.reduce((sum, b) => sum + b.currentBalance, 0)
   const totalInitial = bankrolls.reduce((sum, b) => sum + b.initialBalance, 0)
@@ -61,7 +67,12 @@ export default async function BankrollsPage() {
           </CardContent>
         </Card>
       ) : (
-        <BankrollsList bankrolls={bankrolls} />
+        <>
+          <BankrollsList bankrolls={bankrolls} />
+          <div className="mt-6">
+            <TransactionsList transactions={transactions} showBankrollName={true} />
+          </div>
+        </>
       )}
     </div>
   )

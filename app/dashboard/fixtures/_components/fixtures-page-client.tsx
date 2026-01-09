@@ -10,9 +10,11 @@ import type { Fixture } from "@/lib/types/fixtures";
 
 interface FixturesPageClientProps {
   initialFixtures: Fixture[];
+  favoriteLeagueIds: string[];
+  favoriteTeamIds: string[];
 }
 
-export function FixturesPageClient({ initialFixtures }: FixturesPageClientProps) {
+export function FixturesPageClient({ initialFixtures, favoriteLeagueIds, favoriteTeamIds }: FixturesPageClientProps) {
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -121,7 +123,11 @@ export function FixturesPageClient({ initialFixtures }: FixturesPageClientProps)
           </CardContent>
         </Card>
       ) : (
-        <FixturesList fixtures={fixtures} />
+        <FixturesList 
+          fixtures={fixtures}
+          favoriteLeagueIds={favoriteLeagueIds}
+          favoriteTeamIds={favoriteTeamIds}
+        />
       )}
     </div>
   );

@@ -223,11 +223,29 @@ export async function updateBankrollBalance(data: UpdateBankrollBalanceInput) {
         return { error: "Operação inválida" };
     }
 
-    const bankroll = await prisma.bankroll.update({
-      where: { id: validatedData.id },
-      data: {
-        currentBalance: newBalance,
-      },
+    // Atualizar saldo e criar transação em uma transação
+    const result = await prisma.$transaction(async (tx) => {
+      // Atualizar saldo da banca
+      const bankroll = await tx.bankroll.update({
+        where: { id: validatedData.id },
+        data: {
+          currentBalance: newBalance,
+        },
+      });
+
+      // Criar registro de transação para operações add e subtract
+      if (validatedData.operation === "add" || validatedData.operation === "subtract") {
+        await tx.transaction.create({
+          data: {
+            bankrollId: validatedData.id,
+            type: validatedData.operation === "add" ? "DEPOSIT" : "WITHDRAW",
+            amount: validatedData.amount,
+            description: validatedData.description || null,
+          },
+        });
+      }
+
+      return bankroll;
     });
 
     revalidatePath("/dashboard");

@@ -1,20 +1,11 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { updateBankrollBalance, updateBankroll, deleteBankroll } from '@/lib/actions/bankroll'
+import { useTransition } from 'react'
+import { updateBankroll, deleteBankroll } from '@/lib/actions/bankroll'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,11 +17,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { TrendingUp, TrendingDown, Plus, Minus, Settings, Loader2 } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, Settings, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { DepositDialog } from './deposit-dialog'
+import { WithdrawDialog } from './withdraw-dialog'
+
 interface Bankroll {
   id: string
   name: string
@@ -48,29 +39,6 @@ interface BankrollsListProps {
 
 export function BankrollsList({ bankrolls }: BankrollsListProps) {
   const [isPending, startTransition] = useTransition()
-  const [selectedBankroll, setSelectedBankroll] = useState<Bankroll | null>(null)
-  const [amount, setAmount] = useState('')
-  const [operation, setOperation] = useState<'add' | 'subtract' | 'set'>('add')
-
-  const handleUpdateBalance = () => {
-    if (!selectedBankroll || !amount) return
-
-    startTransition(async () => {
-      const result = await updateBankrollBalance({
-        id: selectedBankroll.id,
-        amount: Number(amount),
-        operation,
-      })
-
-      if (result.success) {
-        toast.success('Saldo atualizado!')
-        setSelectedBankroll(null)
-        setAmount('')
-      } else {
-        toast.error(result.error)
-      }
-    })
-  }
 
   const toggleActive = (bankroll: Bankroll) => {
     startTransition(async () => {
@@ -173,83 +141,8 @@ export function BankrollsList({ bankrolls }: BankrollsListProps) {
 
               {/* Ações */}
               <div className="flex gap-2">
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => {
-                        setSelectedBankroll(bankroll)
-                        setOperation('add')
-                      }}
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Depositar
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Atualizar Saldo</DialogTitle>
-                      <DialogDescription>
-                        {bankroll.name}
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>Operação</Label>
-                        <Select value={operation} onValueChange={(v: any) => setOperation(v)}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="add">Adicionar</SelectItem>
-                            <SelectItem value="subtract">Subtrair</SelectItem>
-                            <SelectItem value="set">Definir Valor</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Valor (R$)</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={amount}
-                          onChange={(e) => setAmount(e.target.value)}
-                          placeholder="0.00"
-                        />
-                      </div>
-                      <div className="bg-muted p-3 rounded-lg text-sm">
-                        <div className="flex justify-between">
-                          <span>Saldo atual:</span>
-                          <span className="font-semibold">R$ {bankroll.currentBalance.toFixed(2)}</span>
-                        </div>
-                        {amount && (
-                          <div className="flex justify-between mt-1">
-                            <span>Novo saldo:</span>
-                            <span className="font-semibold">
-                              R$ {(
-                                operation === 'add'
-                                  ? bankroll.currentBalance + Number(amount)
-                                  : operation === 'subtract'
-                                    ? bankroll.currentBalance - Number(amount)
-                                    : Number(amount)
-                              ).toFixed(2)}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button onClick={handleUpdateBalance} disabled={isPending || !amount}>
-                        {isPending ? (
-                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Processando...</>
-                        ) : (
-                          'Confirmar'
-                        )}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                <DepositDialog bankroll={bankroll} />
+                <WithdrawDialog bankroll={bankroll} />
 
                 <AlertDialog>
                   <AlertDialogTrigger asChild>

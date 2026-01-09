@@ -21,6 +21,7 @@ export const UpdateBankrollBalanceSchema = z.object({
     .number({ required_error: 'Valor é obrigatório' })
     .refine((val) => val !== 0, 'Valor não pode ser zero'),
   operation: z.enum(['add', 'subtract', 'set']),
+  description: z.string().optional(),
 })
 
 export type CreateBankrollInput = z.infer<typeof CreateBankrollSchema>

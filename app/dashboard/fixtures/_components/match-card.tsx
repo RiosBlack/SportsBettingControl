@@ -5,9 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Circle, Basketball } from "lucide-react";
 import type { Fixture } from "@/lib/types/fixtures";
 import Image from "next/image";
+import { FavoriteTeamButton } from "./favorite-team-button";
 
 interface MatchCardProps {
   fixture: Fixture;
+  hideLeagueHeader?: boolean;
+  favoriteTeamIds?: string[];
 }
 
 function getStatusColor(status: string): string {
@@ -41,38 +44,43 @@ function getStatusLabel(status: string): string {
   return status;
 }
 
-export function MatchCard({ fixture }: MatchCardProps) {
+export function MatchCard({ fixture, hideLeagueHeader = false, favoriteTeamIds = [] }: MatchCardProps) {
   const isFinished = fixture.status.toUpperCase() === "FT" || fixture.status.toUpperCase() === "FINISHED";
   const isLive = fixture.status.toUpperCase() === "LIVE" || fixture.status.toUpperCase() === "IN PLAY";
+  
+  const isHomeTeamFavorite = favoriteTeamIds.includes(fixture.homeTeam.id);
+  const isAwayTeamFavorite = favoriteTeamIds.includes(fixture.awayTeam.id);
 
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardContent className="p-6">
         {/* League Header */}
-        <div className="flex items-center gap-3 mb-4 pb-3 border-b">
-          {fixture.league.logo && (
-            <div className="relative w-6 h-6">
-              <Image
-                src={fixture.league.logo}
-                alt={fixture.league.name}
-                fill
-                className="object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
-              />
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{fixture.league.name}</p>
-            {fixture.league.country && (
-              <p className="text-xs text-muted-foreground">{fixture.league.country}</p>
+        {!hideLeagueHeader && (
+          <div className="flex items-center gap-3 mb-4 pb-3 border-b">
+            {fixture.league.logo && (
+              <div className="relative w-6 h-6">
+                <Image
+                  src={fixture.league.logo}
+                  alt={fixture.league.name}
+                  fill
+                  className="object-contain"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              </div>
             )}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{fixture.league.name}</p>
+              {fixture.league.country && (
+                <p className="text-xs text-muted-foreground">{fixture.league.country}</p>
+              )}
+            </div>
+            <Badge className={getStatusColor(fixture.status)}>
+              {getStatusLabel(fixture.status)}
+            </Badge>
           </div>
-          <Badge className={getStatusColor(fixture.status)}>
-            {getStatusLabel(fixture.status)}
-          </Badge>
-        </div>
+        )}
 
         {/* Match Content */}
         <div className="space-y-4">
@@ -102,7 +110,17 @@ export function MatchCard({ fixture }: MatchCardProps) {
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">{fixture.homeTeam.name}</p>
+                <div className="flex items-center gap-2">
+                  <p className={isHomeTeamFavorite ? "font-medium truncate text-yellow-400" : "font-medium truncate"}>
+                    {fixture.homeTeam.name}
+                  </p>
+                  <FavoriteTeamButton
+                    teamId={fixture.homeTeam.id}
+                    teamName={fixture.homeTeam.name}
+                    isFavorite={isHomeTeamFavorite}
+                    size="sm"
+                  />
+                </div>
                 {isFinished && fixture.homeScore !== null && (
                   <p className="text-2xl font-bold text-primary mt-1">
                     {fixture.homeScore}
@@ -163,7 +181,17 @@ export function MatchCard({ fixture }: MatchCardProps) {
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">{fixture.awayTeam.name}</p>
+                <div className="flex items-center gap-2 justify-end">
+                  <FavoriteTeamButton
+                    teamId={fixture.awayTeam.id}
+                    teamName={fixture.awayTeam.name}
+                    isFavorite={isAwayTeamFavorite}
+                    size="sm"
+                  />
+                  <p className={isAwayTeamFavorite ? "font-medium truncate text-yellow-400" : "font-medium truncate"}>
+                    {fixture.awayTeam.name}
+                  </p>
+                </div>
                 {isFinished && fixture.awayScore !== null && (
                   <p className="text-2xl font-bold text-primary mt-1">
                     {fixture.awayScore}
