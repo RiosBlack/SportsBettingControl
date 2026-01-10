@@ -30,7 +30,7 @@ export function FixturesPageClient({ initialFixtures, favoriteLeagueIds, favorit
       try {
         const dateStr = selectedDate.toISOString().split("T")[0];
         const response = await fetch(`/api/fixtures?date=${dateStr}`);
-        
+
         if (response.ok) {
           const data = await response.json();
           setFixtures(data.success ? data.data || [] : []);
@@ -49,9 +49,6 @@ export function FixturesPageClient({ initialFixtures, favoriteLeagueIds, favorit
   }, [selectedDate]);
 
   const footballCount = fixtures.filter((f) => f.sport === "FUTEBOL").length;
-  const basketballCount = fixtures.filter(
-    (f) => f.sport === "BASQUETE" && f.league.apiId === 12
-  ).length;
 
   return (
     <div className="container mx-auto max-w-7xl p-4 md:p-6 lg:p-8">
@@ -84,7 +81,7 @@ export function FixturesPageClient({ initialFixtures, favoriteLeagueIds, favorit
 
       {/* Stats */}
       {!isLoading && fixtures.length > 0 && (
-        <div className="grid gap-4 md:grid-cols-3 mb-6">
+        <div className="grid gap-4 md:grid-cols-2 mb-6">
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium">Total de Jogos</CardTitle>
@@ -101,14 +98,6 @@ export function FixturesPageClient({ initialFixtures, favoriteLeagueIds, favorit
               <div className="text-2xl font-bold">{footballCount}</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Basquete</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{basketballCount}</div>
-            </CardContent>
-          </Card>
         </div>
       )}
 
@@ -123,7 +112,7 @@ export function FixturesPageClient({ initialFixtures, favoriteLeagueIds, favorit
           </CardContent>
         </Card>
       ) : (
-        <FixturesList 
+        <FixturesList
           fixtures={fixtures}
           favoriteLeagueIds={favoriteLeagueIds}
           favoriteTeamIds={favoriteTeamIds}

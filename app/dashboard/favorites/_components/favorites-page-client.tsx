@@ -39,7 +39,7 @@ export function FavoritesPageClient({ initialLeagues, initialTeams }: FavoritesP
   const [teams, setTeams] = useState<Team[]>(initialTeams);
   const [leagueSearch, setLeagueSearch] = useState("");
   const [teamSearch, setTeamSearch] = useState("");
-  const [sportFilter, setSportFilter] = useState<"ALL" | "FUTEBOL" | "BASQUETE">("ALL");
+  const [sportFilter, setSportFilter] = useState<"ALL" | "FUTEBOL">("ALL");
 
   // Filtrar ligas
   const filteredLeagues = useMemo(() => {
@@ -153,16 +153,6 @@ export function FavoritesPageClient({ initialLeagues, initialTeams }: FavoritesP
             }`}
           >
             Futebol
-          </button>
-          <button
-            onClick={() => setSportFilter("BASQUETE")}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              sportFilter === "BASQUETE"
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:bg-muted/80"
-            }`}
-          >
-            Basquete
           </button>
         </div>
 

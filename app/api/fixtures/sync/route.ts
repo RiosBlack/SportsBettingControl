@@ -19,7 +19,6 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       footballCount: result.footballCount || 0,
-      basketballCount: result.basketballCount || 0,
       syncedAt: result.syncedAt,
     });
   } catch (error: any) {

@@ -44,14 +44,15 @@ export function AppSidebarNav() {
     <SidebarMenu>
       {menuItems.map((item) => {
         // Para destacar item ativo, verifica se o pathname corresponde exatamente ou começa com a URL
-        const isActive = pathname === item.url || 
+        const isActive = pathname === item.url ||
           (item.url !== "/dashboard" && pathname.startsWith(item.url));
         return (
           <SidebarMenuItem key={item.title}>
             <SidebarMenuButton asChild isActive={isActive}>
               <Link href={item.url}>
                 <item.icon />
-                <span>{item.title}</span>
+                <span>{item.title}
+                </span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

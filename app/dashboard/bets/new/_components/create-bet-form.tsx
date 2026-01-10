@@ -122,7 +122,6 @@ export function CreateBetForm({ bankrolls, matches }: CreateBetFormProps) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="FUTEBOL">Futebol</SelectItem>
-                  <SelectItem value="BASQUETE">Basquete</SelectItem>
                   <SelectItem value="TENIS">Tênis</SelectItem>
                   <SelectItem value="VOLEI">Vôlei</SelectItem>
                   <SelectItem value="FUTSAL">Futsal</SelectItem>

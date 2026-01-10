@@ -2,7 +2,6 @@ import { z } from 'zod'
 
 export const SportEnum = z.enum([
   'FUTEBOL',
-  'BASQUETE',
   'TENIS',
   'VOLEI',
   'FUTSAL',

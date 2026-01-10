@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import type { Fixture } from "@/lib/types/fixtures";
 import { FavoriteLeagueButton } from "./favorite-league-button";
 
-type Sport = "FUTEBOL" | "BASQUETE" | "ALL";
+type Sport = "FUTEBOL" | "ALL";
 
 interface FixturesListProps {
   fixtures: Fixture[];
@@ -46,18 +46,10 @@ export function FixturesList({ fixtures, favoriteLeagueIds = [], favoriteTeamIds
   };
 
   // Filtrar jogos por esporte
-  // Basquete: apenas NBA (league.apiId === 12)
   // Futebol: todos os jogos do dia (incluindo finalizados)
   const filteredFixtures = useMemo(() => {
     if (selectedSport === "ALL") {
       return fixtures;
-    }
-
-    if (selectedSport === "BASQUETE") {
-      // Filtrar apenas jogos da NBA (league.apiId === 12)
-      return fixtures.filter(
-        (fixture) => fixture.sport === "BASQUETE" && fixture.league.apiId === 12
-      );
     }
 
     // Futebol: retornar todos os jogos (sem filtro de status)
@@ -139,7 +131,7 @@ export function FixturesList({ fixtures, favoriteLeagueIds = [], favoriteTeamIds
               <p className="text-muted-foreground">
                 {selectedSport === "ALL"
                   ? "Nenhum jogo encontrado para hoje"
-                  : `Nenhum jogo de ${selectedSport === "FUTEBOL" ? "futebol" : "basquete"} encontrado para hoje`}
+                  : "Nenhum jogo de futebol encontrado para hoje"}
               </p>
             </div>
           </CardContent>

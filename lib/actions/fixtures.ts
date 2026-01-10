@@ -3,7 +3,6 @@
 import { prisma } from "@/lib/prisma";
 import type {
   ApiFootballResponse,
-  ApiBasketballResponse,
   SyncFixturesResult,
   Fixture,
 } from "@/lib/types/fixtures";
@@ -63,45 +62,6 @@ async function fetchFootballFixtures(
     return data;
   } catch (error) {
     console.error("Error fetching football fixtures:", error);
-    return null;
-  }
-}
-
-// Buscar jogos de basquete da API-Sports (apenas NBA)
-// NBA league ID: 12
-async function fetchBasketballGames(
-  date: string
-): Promise<ApiBasketballResponse | null> {
-  try {
-    const apiKey = process.env.API_SPORTS_KEY;
-
-    if (!apiKey) {
-      console.error("API_SPORTS_KEY not configured");
-      return null;
-    }
-
-    // Filtrar apenas jogos da NBA (league ID = 12)
-    const response = await fetch(
-      `https://v1.basketball.api-sports.io/games?date=${date}&league=12`,
-      {
-        headers: {
-          "x-rapidapi-key": apiKey,
-          "x-rapidapi-host": "v1.basketball.api-sports.io",
-        },
-        cache: "no-store",
-      }
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("API-Sports error:", response.status, errorText);
-      return null;
-    }
-
-    const data: ApiBasketballResponse = await response.json();
-    return data;
-  } catch (error) {
-    console.error("Error fetching basketball games:", error);
     return null;
   }
 }
@@ -169,13 +129,13 @@ async function processFootballFixtures(
 
       // Parse date
       const utcDate = new Date(fixture.fixture.date);
-      
+
       // Criar data de jogo usando apenas a parte da data (YYYY-MM-DD) em UTC
       // e converter para data local sem horas para evitar problemas de timezone
       const utcYear = utcDate.getUTCFullYear();
       const utcMonth = utcDate.getUTCMonth();
       const utcDay = utcDate.getUTCDate();
-      
+
       // Criar data local com a mesma data (sem considerar timezone)
       const matchDate = new Date(utcYear, utcMonth, utcDay, 0, 0, 0, 0);
 
@@ -236,130 +196,6 @@ async function processFootballFixtures(
   return count;
 }
 
-// Processar e salvar jogos de basquete (apenas NBA)
-async function processBasketballGames(
-  data: ApiBasketballResponse
-): Promise<number> {
-  let count = 0;
-
-  // Filtrar apenas jogos da NBA (league ID = 12)
-  const nbaGames = data.response.filter((game) => game.league.id === 12);
-
-  for (const game of nbaGames) {
-    try {
-      // Upsert League
-      const league = await prisma.league.upsert({
-        where: { apiId: game.league.id },
-        update: {
-          name: game.league.name,
-          logo: game.league.logo,
-          country: game.country.name,
-        },
-        create: {
-          apiId: game.league.id,
-          name: game.league.name,
-          logo: game.league.logo,
-          country: game.country.name,
-          sport: "BASQUETE",
-        },
-      });
-
-      // Upsert Home Team
-      const homeTeam = await prisma.team.upsert({
-        where: { apiId: game.teams.home.id },
-        update: {
-          name: game.teams.home.name,
-          logo: game.teams.home.logo,
-        },
-        create: {
-          apiId: game.teams.home.id,
-          name: game.teams.home.name,
-          logo: game.teams.home.logo,
-          sport: "BASQUETE",
-        },
-      });
-
-      // Upsert Away Team
-      const awayTeam = await prisma.team.upsert({
-        where: { apiId: game.teams.away.id },
-        update: {
-          name: game.teams.away.name,
-          logo: game.teams.away.logo,
-        },
-        create: {
-          apiId: game.teams.away.id,
-          name: game.teams.away.name,
-          logo: game.teams.away.logo,
-          sport: "BASQUETE",
-        },
-      });
-
-      // Parse date
-      const utcDate = new Date(game.date);
-      if (game.time) {
-        const [hours, minutes] = game.time.split(":").map(Number);
-        utcDate.setUTCHours(hours, minutes, 0, 0);
-      }
-      
-      // Criar data de jogo usando apenas a parte da data (YYYY-MM-DD) em UTC
-      // e converter para data local sem horas para evitar problemas de timezone
-      const utcYear = utcDate.getUTCFullYear();
-      const utcMonth = utcDate.getUTCMonth();
-      const utcDay = utcDate.getUTCDate();
-      
-      // Criar data local com a mesma data (sem considerar timezone)
-      const matchDate = new Date(utcYear, utcMonth, utcDay, 0, 0, 0, 0);
-
-      // Extract time
-      const time =
-        game.time ||
-        utcDate.toLocaleTimeString("pt-BR", {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-
-      // Get scores
-      const homeScore = game.scores.home.total;
-      const awayScore = game.scores.away.total;
-
-      // Upsert Match
-      await prisma.match.upsert({
-        where: { apiId: game.id },
-        update: {
-          date: matchDate,
-          time,
-          utcDate,
-          status: game.status.short,
-          homeScore,
-          awayScore,
-          homeTeamId: homeTeam.id,
-          awayTeamId: awayTeam.id,
-          leagueId: league.id,
-        },
-        create: {
-          apiId: game.id,
-          sport: "BASQUETE",
-          date: matchDate,
-          time,
-          utcDate,
-          status: game.status.short,
-          homeScore,
-          awayScore,
-          homeTeamId: homeTeam.id,
-          awayTeamId: awayTeam.id,
-          leagueId: league.id,
-        },
-      });
-
-      count++;
-    } catch (error) {
-      console.error(`Error processing basketball game ${game.id}:`, error);
-    }
-  }
-
-  return count;
-}
-
 // Sincronizar jogos do dia
 // Sempre busca e atualiza os jogos para garantir que todos sejam salvos
 export async function syncDailyFixtures(
@@ -377,22 +213,25 @@ export async function syncDailyFixtures(
         return {
           success: true,
           footballCount: 0,
-          basketballCount: 0,
           syncedAt: new Date(),
         };
       }
     }
 
+    // Deletar jogos antigos (anteriores ao dia atual)
+    // Apenas a tabela Match é afetada, conforme requisito
+    await prisma.match.deleteMany({
+      where: {
+        date: {
+          lt: todayDate,
+        },
+      },
+    });
+
     // Buscar TODOS os jogos de futebol do dia
     const footballData = await fetchFootballFixtures(today);
     const footballCount = footballData
       ? await processFootballFixtures(footballData)
-      : 0;
-
-    // Buscar jogos de basquete (apenas NBA)
-    const basketballData = await fetchBasketballGames(today);
-    const basketballCount = basketballData
-      ? await processBasketballGames(basketballData)
       : 0;
 
     // Registrar sincronização
@@ -408,7 +247,6 @@ export async function syncDailyFixtures(
     return {
       success: true,
       footballCount,
-      basketballCount,
       syncedAt: new Date(),
     };
   } catch (error: any) {
@@ -423,7 +261,7 @@ export async function syncDailyFixtures(
 // Buscar jogos do dia do banco
 // Retorna TODOS os jogos do dia, incluindo finalizados, sem filtro de status
 export async function getTodayFixtures(
-  sport?: "FUTEBOL" | "BASQUETE",
+  sport?: "FUTEBOL",
   targetDate?: Date
 ): Promise<{
   success: boolean;
@@ -442,15 +280,14 @@ export async function getTodayFixtures(
 
     // Criar data local com a mesma data UTC (mesma lógica usada ao salvar)
     const searchDateLocal = new Date(utcYear, utcMonth, utcDay, 0, 0, 0, 0);
-    
+
     // Também buscar por data UTC equivalente (para jogos salvos antes da correção)
-    const searchDateUTC = new Date(Date.UTC(utcYear, utcMonth, utcDay, 0, 0, 0, 0));
+    const searchDateUTC = new Date(
+      Date.UTC(utcYear, utcMonth, utcDay, 0, 0, 0, 0)
+    );
 
     const where: any = {
-      OR: [
-        { date: searchDateLocal },
-        { date: searchDateUTC }
-      ],
+      OR: [{ date: searchDateLocal }, { date: searchDateUTC }],
       // Não filtrar por status - retornar todos os jogos (NS, LIVE, FT, etc.)
     };
 
@@ -476,7 +313,14 @@ export async function getTodayFixtures(
     // Log para debug
     if (process.env.NODE_ENV === "development") {
       console.log(
-        `Found ${matches.length} matches for date ${utcYear}-${String(utcMonth + 1).padStart(2, "0")}-${String(utcDay).padStart(2, "0")} (searchDateLocal: ${searchDateLocal.toISOString().split("T")[0]}, searchDateUTC: ${searchDateUTC.toISOString().split("T")[0]})`
+        `Found ${matches.length} matches for date ${utcYear}-${String(
+          utcMonth + 1
+        ).padStart(2, "0")}-${String(utcDay).padStart(
+          2,
+          "0"
+        )} (searchDateLocal: ${
+          searchDateLocal.toISOString().split("T")[0]
+        }, searchDateUTC: ${searchDateUTC.toISOString().split("T")[0]})`
       );
     }
 

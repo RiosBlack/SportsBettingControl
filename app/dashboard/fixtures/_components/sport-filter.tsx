@@ -3,10 +3,8 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { PiSoccerBallFill } from "react-icons/pi";
-import { GiBasketballBall } from "react-icons/gi";
 
-
-type Sport = "FUTEBOL" | "BASQUETE" | "ALL";
+type Sport = "FUTEBOL" | "ALL";
 
 interface SportFilterProps {
   selectedSport: Sport;
@@ -36,17 +34,6 @@ export function SportFilter({ selectedSport, onSportChange }: SportFilterProps) 
       >
         <PiSoccerBallFill className="h-4 w-4" />
         Futebol
-      </Button>
-      <Button
-        variant={selectedSport === "BASQUETE" ? "default" : "outline"}
-        onClick={() => onSportChange("BASQUETE")}
-        className={cn(
-          "flex items-center gap-2",
-          selectedSport === "BASQUETE" && "bg-primary text-primary-foreground"
-        )}
-      >
-        <GiBasketballBall className="h-4 w-4" />
-        Basquete
       </Button>
     </div>
   );

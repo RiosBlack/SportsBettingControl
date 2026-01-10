@@ -192,7 +192,6 @@ export interface SyncFixturesResult {
   success: boolean
   error?: string
   footballCount?: number
-  basketballCount?: number
   syncedAt?: Date
 }
 

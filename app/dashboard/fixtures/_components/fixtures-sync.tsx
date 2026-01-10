@@ -14,7 +14,6 @@ export function FixturesSync() {
   const [message, setMessage] = useState<string>("");
   const [result, setResult] = useState<{
     footballCount: number;
-    basketballCount: number;
   } | null>(null);
   const router = useRouter();
 
@@ -54,12 +53,9 @@ export function FixturesSync() {
       setStatus("success");
       setResult({
         footballCount: data.footballCount || 0,
-        basketballCount: data.basketballCount || 0,
       });
       setMessage(
-        `Sincronização concluída! ${data.footballCount || 0} jogos de futebol e ${
-          data.basketballCount || 0
-        } jogos de basquete salvos.`
+        `Sincronização concluída! ${data.footballCount || 0} jogos de futebol salvos.`
       );
 
       // Atualizar a página após 1.5 segundos

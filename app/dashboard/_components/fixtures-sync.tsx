@@ -10,9 +10,7 @@ export function FixturesSync() {
       .then((data) => {
         if (data.success) {
           console.log(
-            `Fixtures synced: ${data.footballCount || 0} football, ${
-              data.basketballCount || 0
-            } basketball`
+            `Fixtures synced: ${data.footballCount || 0} football`
           );
         }
       })
