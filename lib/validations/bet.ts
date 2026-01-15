@@ -37,7 +37,7 @@ export const CreateBetSchema = z.object({
   event: z.string().min(3, 'Nome do evento deve ter no mínimo 3 caracteres'),
   competition: z.string().optional(),
   marketId: z.string({ required_error: 'Mercado é obrigatório' }),
-  selection: z.string().min(1, 'Seleção é obrigatória'),
+  selection: z.string().optional().default(''),
   odds: z.coerce
     .number({ required_error: 'Cotação é obrigatória' })
     .positive('Cotação deve ser maior que zero')

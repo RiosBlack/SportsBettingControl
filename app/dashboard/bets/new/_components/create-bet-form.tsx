@@ -49,7 +49,7 @@ export function CreateBetForm({ bankrolls, matches }: CreateBetFormProps) {
           event: formData.get('event') as string,
           competition: formData.get('competition') as string || undefined,
           marketId: marketId || (formData.get('marketId') as string),
-          selection: formData.get('selection') as string,
+          selection: '', // Campo removido - não é mais necessário
           odds: Number(formData.get('odds')),
           stake: Number(formData.get('stake')),
           eventDate: eventDate,
@@ -209,18 +209,6 @@ export function CreateBetForm({ bankrolls, matches }: CreateBetFormProps) {
               required
             />
             <input type="hidden" name="marketId" value={marketId} required />
-          </div>
-
-          {/* Seleção */}
-          <div className="space-y-2">
-            <Label htmlFor="selection">Seleção *</Label>
-            <Input
-              id="selection"
-              name="selection"
-              placeholder="Ex: Flamengo, Over 2.5, Sim"
-              required
-              disabled={pending}
-            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
