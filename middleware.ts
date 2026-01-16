@@ -1,11 +1,16 @@
-import { auth } from '@/auth'
 import { type NextRequest, NextResponse } from 'next/server'
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   
-  // Obter sessão do NextAuth
-  const session = await auth()
+  // Verificar cookie de sessão do NextAuth (sem importar dependências pesadas)
+  // NextAuth v5 usa o cookie 'authjs.session-token' ou 'next-auth.session-token'
+  const sessionToken = request.cookies.get('authjs.session-token')?.value || 
+                       request.cookies.get('__Secure-authjs.session-token')?.value ||
+                       request.cookies.get('next-auth.session-token')?.value ||
+                       request.cookies.get('__Secure-next-auth.session-token')?.value
+
+  const hasSession = !!sessionToken
 
   // Rotas públicas que não requerem autenticação
   const publicRoutes = ['/login', '/register']
@@ -14,7 +19,7 @@ export async function middleware(request: NextRequest) {
   )
 
   // Se não estiver logado
-  if (!session?.user) {
+  if (!hasSession) {
     // Se tentar acessar a raiz, redireciona para login
     if (pathname === '/') {
       const loginUrl = request.nextUrl.clone()
