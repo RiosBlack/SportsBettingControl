@@ -7,29 +7,36 @@ import type {
   Fixture,
 } from "@/lib/types/fixtures";
 
-// Verificar se precisa sincronizar hoje
-export async function shouldSyncToday(): Promise<boolean> {
+// Verificar se uma liga específica foi sincronizada para uma data específica
+export async function isLeagueSyncedForDate(
+  apiId: number,
+  date: Date
+): Promise<boolean> {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
 
-    const lastSync = await prisma.fixtureSync.findUnique({
+    const matchExists = await prisma.match.findFirst({
       where: {
-        date: today,
+        league: { apiId },
+        date: startOfDay,
       },
     });
 
-    return !lastSync;
+    return !!matchExists;
   } catch (error) {
     console.error("Error checking sync status:", error);
-    return true; // Em caso de erro, permite sincronizar
+    return false;
   }
 }
 
 // Buscar jogos de futebol da API-Football v3
 // Retorna TODOS os jogos do dia, incluindo finalizados (FT), em andamento (LIVE) e não iniciados (NS)
+// Buscar jogos de futebol da API-Football v3
+// Permite buscar por data e opcionalmente por liga específica
 async function fetchFootballFixtures(
-  date: string
+  date: string,
+  apiLeagueId?: number
 ): Promise<ApiFootballResponse | null> {
   try {
     const apiKey = process.env.API_FOOTBALL_KEY;
@@ -39,18 +46,18 @@ async function fetchFootballFixtures(
       return null;
     }
 
-    // Buscar todos os jogos do dia sem filtro de status
-    // A API retorna todos os jogos quando apenas o parâmetro date é fornecido
-    const response = await fetch(
-      `https://v3.football.api-sports.io/fixtures?date=${date}`,
-      {
-        headers: {
-          "x-rapidapi-key": apiKey,
-          "x-rapidapi-host": "v3.football.api-sports.io",
-        },
-        cache: "no-store",
-      }
-    );
+    let url = `https://v3.football.api-sports.io/fixtures?date=${date}`;
+    if (apiLeagueId) {
+      url += `&league=${apiLeagueId}`;
+    }
+
+    const response = await fetch(url, {
+      headers: {
+        "x-rapidapi-key": apiKey,
+        "x-rapidapi-host": "v3.football.api-sports.io",
+      },
+      cache: "no-store",
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -77,55 +84,79 @@ async function processFootballFixtures(
   // Log para debug: quantos jogos foram retornados pela API
   const totalFixtures = data.response.length;
 
+  // Cache local para evitar upserts redundantes na mesma execução
+  const processedLeagues = new Set<number>();
+  const processedTeams = new Set<number>();
+  const teamIdMap = new Map<number, string>();
+  const leagueIdMap = new Map<number, string>();
+
   // Processar TODOS os jogos retornados (sem filtros)
   for (const fixture of data.response) {
     try {
-      // Upsert League
-      const league = await prisma.league.upsert({
-        where: { apiId: fixture.league.id },
-        update: {
-          name: fixture.league.name,
-          logo: fixture.league.logo,
-          country: fixture.league.country,
-        },
-        create: {
-          apiId: fixture.league.id,
-          name: fixture.league.name,
-          logo: fixture.league.logo,
-          country: fixture.league.country,
-          sport: "FUTEBOL",
-        },
-      });
+      let leagueId = leagueIdMap.get(fixture.league.id);
+      if (!processedLeagues.has(fixture.league.id)) {
+        // Upsert League
+        const league = await prisma.league.upsert({
+          where: { apiId: fixture.league.id },
+          update: {
+            name: fixture.league.name,
+            logo: fixture.league.logo,
+            country: fixture.league.country,
+          },
+          create: {
+            apiId: fixture.league.id,
+            name: fixture.league.name,
+            logo: fixture.league.logo,
+            country: fixture.league.country,
+            sport: "FUTEBOL",
+          },
+        });
+        leagueId = league.id;
+        leagueIdMap.set(fixture.league.id, league.id);
+        processedLeagues.add(fixture.league.id);
+      }
 
-      // Upsert Home Team
-      const homeTeam = await prisma.team.upsert({
-        where: { apiId: fixture.teams.home.id },
-        update: {
-          name: fixture.teams.home.name,
-          logo: fixture.teams.home.logo,
-        },
-        create: {
-          apiId: fixture.teams.home.id,
-          name: fixture.teams.home.name,
-          logo: fixture.teams.home.logo,
-          sport: "FUTEBOL",
-        },
-      });
+      let homeTeamId = teamIdMap.get(fixture.teams.home.id);
+      if (!processedTeams.has(fixture.teams.home.id)) {
+        // Upsert Home Team
+        const homeTeam = await prisma.team.upsert({
+          where: { apiId: fixture.teams.home.id },
+          update: {
+            name: fixture.teams.home.name,
+            logo: fixture.teams.home.logo,
+          },
+          create: {
+            apiId: fixture.teams.home.id,
+            name: fixture.teams.home.name,
+            logo: fixture.teams.home.logo,
+            sport: "FUTEBOL",
+          },
+        });
+        homeTeamId = homeTeam.id;
+        teamIdMap.set(fixture.teams.home.id, homeTeam.id);
+        processedTeams.add(fixture.teams.home.id);
+      }
 
-      // Upsert Away Team
-      const awayTeam = await prisma.team.upsert({
-        where: { apiId: fixture.teams.away.id },
-        update: {
-          name: fixture.teams.away.name,
-          logo: fixture.teams.away.logo,
-        },
-        create: {
-          apiId: fixture.teams.away.id,
-          name: fixture.teams.away.name,
-          logo: fixture.teams.away.logo,
-          sport: "FUTEBOL",
-        },
-      });
+      let awayTeamId = teamIdMap.get(fixture.teams.away.id);
+      if (!processedTeams.has(fixture.teams.away.id)) {
+        // Upsert Away Team
+        const awayTeam = await prisma.team.upsert({
+          where: { apiId: fixture.teams.away.id },
+          update: {
+            name: fixture.teams.away.name,
+            logo: fixture.teams.away.logo,
+          },
+          create: {
+            apiId: fixture.teams.away.id,
+            name: fixture.teams.away.name,
+            logo: fixture.teams.away.logo,
+            sport: "FUTEBOL",
+          },
+        });
+        awayTeamId = awayTeam.id;
+        teamIdMap.set(fixture.teams.away.id, awayTeam.id);
+        processedTeams.add(fixture.teams.away.id);
+      }
 
       // Parse date
       const utcDate = new Date(fixture.fixture.date);
@@ -155,9 +186,9 @@ async function processFootballFixtures(
           status: fixture.fixture.status.short,
           homeScore: fixture.goals.home,
           awayScore: fixture.goals.away,
-          homeTeamId: homeTeam.id,
-          awayTeamId: awayTeam.id,
-          leagueId: league.id,
+          homeTeamId: homeTeamId!,
+          awayTeamId: awayTeamId!,
+          leagueId: leagueId!,
         },
         create: {
           apiId: fixture.fixture.id,
@@ -168,9 +199,9 @@ async function processFootballFixtures(
           status: fixture.fixture.status.short,
           homeScore: fixture.goals.home,
           awayScore: fixture.goals.away,
-          homeTeamId: homeTeam.id,
-          awayTeamId: awayTeam.id,
-          leagueId: league.id,
+          homeTeamId: homeTeamId!,
+          awayTeamId: awayTeamId!,
+          leagueId: leagueId!,
         },
       });
 
@@ -198,6 +229,55 @@ async function processFootballFixtures(
 
 // Sincronizar jogos do dia
 // Sempre busca e atualiza os jogos para garantir que todos sejam salvos
+// Sincronizar jogos de ligas específicas para uma data
+export async function syncFixturesByLeagues(
+  date: Date,
+  leagueIds: string[],
+  force: boolean = false
+): Promise<SyncFixturesResult> {
+  try {
+    const dateStr = date.toISOString().split("T")[0];
+    const targetDate = new Date(date);
+    targetDate.setHours(0, 0, 0, 0);
+
+    // Buscar as ligas no banco para obter os apiIds
+    const leagues = await prisma.league.findMany({
+      where: {
+        id: { in: leagueIds },
+      },
+    });
+
+    let totalProcessed = 0;
+
+    for (const league of leagues) {
+      // Verificar se já sincronizou (a menos que force seja true)
+      if (!force) {
+        const alreadySynced = await isLeagueSyncedForDate(league.apiId, targetDate);
+        if (alreadySynced) continue;
+      }
+
+      const footballData = await fetchFootballFixtures(dateStr, league.apiId);
+      if (footballData) {
+        const count = await processFootballFixtures(footballData);
+        totalProcessed += count;
+      }
+    }
+
+    return {
+      success: true,
+      footballCount: totalProcessed,
+      syncedAt: new Date(),
+    };
+  } catch (error: any) {
+    console.error("Error syncing selective fixtures:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to sync selective fixtures",
+    };
+  }
+}
+
+// Sincronizar jogos do dia (mantido por compatibilidade, mas atualizado para usar nova lógica se necessário)
 export async function syncDailyFixtures(
   force: boolean = false
 ): Promise<SyncFixturesResult> {
@@ -206,43 +286,11 @@ export async function syncDailyFixtures(
     const todayDate = new Date();
     todayDate.setHours(0, 0, 0, 0);
 
-    // Verificar se já foi sincronizado hoje (a menos que force seja true)
-    if (!force) {
-      const needsSync = await shouldSyncToday();
-      if (!needsSync) {
-        return {
-          success: true,
-          footballCount: 0,
-          syncedAt: new Date(),
-        };
-      }
-    }
-
-    // Deletar jogos antigos (anteriores ao dia atual)
-    // Apenas a tabela Match é afetada, conforme requisito
-    await prisma.match.deleteMany({
-      where: {
-        date: {
-          lt: todayDate,
-        },
-      },
-    });
-
     // Buscar TODOS os jogos de futebol do dia
     const footballData = await fetchFootballFixtures(today);
     const footballCount = footballData
       ? await processFootballFixtures(footballData)
       : 0;
-
-    // Registrar sincronização
-    await prisma.fixtureSync.upsert({
-      where: { date: todayDate },
-      update: { syncedAt: new Date() },
-      create: {
-        date: todayDate,
-        syncedAt: new Date(),
-      },
-    });
 
     return {
       success: true,
@@ -262,13 +310,24 @@ export async function syncDailyFixtures(
 // Retorna TODOS os jogos do dia, incluindo finalizados, sem filtro de status
 export async function getTodayFixtures(
   sport?: "FUTEBOL",
-  targetDate?: Date
+  targetDate?: Date,
+  leagueIds?: string[]
 ): Promise<{
   success: boolean;
   data?: Fixture[];
   error?: string;
+  noLeaguesSelected?: boolean;
 }> {
   try {
+    // Se leagueIds for fornecido mas estiver vazio, significa que o usuário não selecionou nada
+    if (leagueIds && leagueIds.length === 0) {
+      return {
+        success: true,
+        data: [],
+        noLeaguesSelected: true,
+      };
+    }
+
     // Usar a data fornecida ou hoje como padrão
     const searchDate = targetDate ? new Date(targetDate) : new Date();
 
@@ -288,11 +347,14 @@ export async function getTodayFixtures(
 
     const where: any = {
       OR: [{ date: searchDateLocal }, { date: searchDateUTC }],
-      // Não filtrar por status - retornar todos os jogos (NS, LIVE, FT, etc.)
     };
 
     if (sport) {
       where.sport = sport;
+    }
+
+    if (leagueIds && leagueIds.length > 0) {
+      where.leagueId = { in: leagueIds };
     }
 
     // Buscar todos os jogos do dia sem filtro de status

@@ -7,7 +7,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { Home, Wallet, BarChart3, Plus, Calendar } from "lucide-react";
+import { Home, Wallet, BarChart3, Plus, Calendar, Settings } from "lucide-react";
 
 const menuItems = [
   {
@@ -34,6 +34,11 @@ const menuItems = [
     title: "Nova Aposta",
     url: "/dashboard/bets/new",
     icon: Plus,
+  },
+  {
+    title: "Configurações",
+    url: "/dashboard/settings/leagues",
+    icon: Settings,
   },
 ];
 

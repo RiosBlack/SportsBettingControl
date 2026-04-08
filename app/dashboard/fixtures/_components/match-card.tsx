@@ -1,200 +1,144 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Circle } from "lucide-react";
 import type { Fixture } from "@/lib/types/fixtures";
 import Image from "next/image";
-import { FavoriteTeamButton } from "./favorite-team-button";
+import { MapPin, ArrowRight, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 interface MatchCardProps {
   fixture: Fixture;
-  hideLeagueHeader?: boolean;
-  favoriteTeamIds?: string[];
 }
 
-function getStatusColor(status: string): string {
-  const statusUpper = status.toUpperCase();
-  if (statusUpper === "FT" || statusUpper === "FINISHED") {
-    return "bg-green-500/10 text-green-500";
-  }
-  if (statusUpper === "LIVE" || statusUpper === "IN PLAY") {
-    return "bg-yellow-500/10 text-yellow-500";
-  }
-  return "bg-muted text-muted-foreground";
-}
-
-function getStatusLabel(status: string): string {
-  const statusUpper = status.toUpperCase();
-  if (statusUpper === "FT" || statusUpper === "FINISHED") {
-    return "Finalizado";
-  }
-  if (statusUpper === "LIVE" || statusUpper === "IN PLAY") {
-    return "Ao vivo";
-  }
-  if (statusUpper === "NS" || statusUpper === "NOT STARTED") {
-    return "Não iniciado";
-  }
-  if (statusUpper === "HT") {
-    return "Intervalo";
-  }
-  if (statusUpper === "2H" || statusUpper === "1H") {
-    return "Em andamento";
-  }
-  return status;
-}
-
-export function MatchCard({ fixture, hideLeagueHeader = false, favoriteTeamIds = [] }: MatchCardProps) {
-  const isFinished = fixture.status.toUpperCase() === "FT" || fixture.status.toUpperCase() === "FINISHED";
-  const isLive = fixture.status.toUpperCase() === "LIVE" || fixture.status.toUpperCase() === "IN PLAY";
-  
-  const isHomeTeamFavorite = favoriteTeamIds.includes(fixture.homeTeam.id);
-  const isAwayTeamFavorite = favoriteTeamIds.includes(fixture.awayTeam.id);
+export function MatchCard({ fixture }: MatchCardProps) {
+  const isLive = fixture.status === "1H" || fixture.status === "2H" || fixture.status === "HT" || fixture.status === "LIVE";
+  const isFinished = fixture.status === "FT" || fixture.status === "AET" || fixture.status === "PEN";
+  const isPending = !isLive && !isFinished;
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="p-6">
-        {/* League Header */}
-        {!hideLeagueHeader && (
-          <div className="flex items-center gap-3 mb-4 pb-3 border-b">
-            {fixture.league.logo && (
-              <div className="relative w-6 h-6">
-                <Image
-                  src={fixture.league.logo}
-                  alt={fixture.league.name}
-                  fill
-                  className="object-contain"
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                  }}
-                />
-              </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{fixture.league.name}</p>
-              {fixture.league.country && (
-                <p className="text-xs text-muted-foreground">{fixture.league.country}</p>
-              )}
-            </div>
-            <Badge className={getStatusColor(fixture.status)}>
-              {getStatusLabel(fixture.status)}
-            </Badge>
+    <div className="group bg-[#161616] border border-white/5 rounded-xl overflow-hidden hover:border-[#a3e635]/30 transition-all duration-300 flex flex-col h-full shadow-lg">
+      {/* Header - League */}
+      <div className="px-4 py-3 flex items-center gap-2 border-b border-white/5 bg-white/[0.02]">
+        {fixture.league.logo && (
+          <div className="relative h-4 w-4 shrink-0">
+            <Image
+              src={fixture.league.logo}
+              alt={fixture.league.name}
+              fill
+              className="object-contain"
+            />
           </div>
         )}
+        <span className="text-[11px] font-medium text-muted-foreground truncate uppercase tracking-wider">
+          {fixture.league.name}
+        </span>
+      </div>
 
-        {/* Match Content */}
-        <div className="space-y-4">
-          {/* Teams */}
-          <div className="flex items-center justify-between gap-4">
-            {/* Home Team */}
-            <div className="flex-1 flex items-center gap-3">
+      {/* Body - Match Detail */}
+      <div className="flex-1 p-6 flex flex-col justify-center items-center space-y-6">
+        <div className="flex items-center justify-between w-full gap-4">
+          {/* Home Team */}
+          <div className="flex flex-col items-center flex-1 space-y-3">
+            <div className="relative h-16 w-16 md:h-20 md:w-20 drop-shadow-2xl">
               {fixture.homeTeam.logo ? (
-                <div className="relative w-10 h-10 flex-shrink-0">
-                  <Image
-                    src={fixture.homeTeam.logo}
-                    alt={fixture.homeTeam.name}
-                    fill
-                    className="object-contain"
-                    onError={(e) => {
-                      e.currentTarget.style.display = "none";
-                    }}
-                  />
-                </div>
+                <Image
+                  src={fixture.homeTeam.logo}
+                  alt={fixture.homeTeam.name}
+                  fill
+                  className="object-contain"
+                />
               ) : (
-                <div className="w-10 h-10 flex items-center justify-center bg-muted rounded-full">
-                  <Circle className="h-5 w-5 text-muted-foreground" />
+                <div className="w-full h-full bg-accent/20 rounded-full flex items-center justify-center text-2xl font-bold">
+                  {fixture.homeTeam.name[0]}
                 </div>
               )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className={isHomeTeamFavorite ? "font-medium truncate text-yellow-400" : "font-medium truncate"}>
-                    {fixture.homeTeam.name}
-                  </p>
-                  <FavoriteTeamButton
-                    teamId={fixture.homeTeam.id}
-                    teamName={fixture.homeTeam.name}
-                    isFavorite={isHomeTeamFavorite}
-                    size="sm"
-                  />
-                </div>
-                {isFinished && fixture.homeScore !== null && (
-                  <p className="text-2xl font-bold text-primary mt-1">
-                    {fixture.homeScore}
-                  </p>
-                )}
-              </div>
             </div>
+            <span className="text-sm font-bold text-center line-clamp-2 min-h-[2.5rem] flex items-center">
+              {fixture.homeTeam.name}
+            </span>
+          </div>
 
-            {/* VS / Time / Score */}
-            <div className="flex flex-col items-center gap-2 min-w-[80px]">
-              {isLive && (
-                <Badge variant="destructive" className="text-xs animate-pulse">
-                  AO VIVO
-                </Badge>
-              )}
-              {!isFinished && !isLive && fixture.time && (
-                <p className="text-sm font-medium text-muted-foreground">
+          {/* Score / Status */}
+          <div className="flex flex-col items-center justify-center min-w-[100px] space-y-2">
+            {isPending ? (
+              <div className="flex flex-col items-center">
+                <span className="text-2xl font-black text-white px-3 py-1 bg-white/5 rounded-lg mb-1">VS</span>
+                <div className="flex items-center gap-1 text-[#a3e635] font-mono text-sm font-bold">
+                  <Clock size={12} />
                   {fixture.time}
-                </p>
-              )}
-              {isFinished && fixture.homeScore !== null && fixture.awayScore !== null && (
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl font-bold">
-                    {fixture.homeScore}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center">
+                <div className="flex items-center gap-3">
+                  <span className={cn(
+                    "text-4xl font-black tabular-nums tracking-tighter",
+                    isLive ? "text-white" : "text-muted-foreground"
+                  )}>
+                    {fixture.homeScore ?? 0}
                   </span>
-                  <span className="text-muted-foreground">x</span>
-                  <span className="text-2xl font-bold">
-                    {fixture.awayScore}
+                  <span className="text-muted-foreground font-light text-xl">-</span>
+                  <span className={cn(
+                    "text-4xl font-black tabular-nums tracking-tighter",
+                    isLive ? "text-white" : "text-muted-foreground"
+                  )}>
+                    {fixture.awayScore ?? 0}
                   </span>
                 </div>
-              )}
-              {!isFinished && !isLive && !fixture.time && (
-                <span className="text-sm text-muted-foreground">VS</span>
-              )}
-            </div>
-
-            {/* Away Team */}
-            <div className="flex-1 flex items-center gap-3 flex-row-reverse text-right">
-              {fixture.awayTeam.logo ? (
-                <div className="relative w-10 h-10 flex-shrink-0">
-                  <Image
-                    src={fixture.awayTeam.logo}
-                    alt={fixture.awayTeam.name}
-                    fill
-                    className="object-contain"
-                    onError={(e) => {
-                      e.currentTarget.style.display = "none";
-                    }}
-                  />
-                </div>
-              ) : (
-                <div className="w-10 h-10 flex items-center justify-center bg-muted rounded-full">
-                  <Circle className="h-5 w-5 text-muted-foreground" />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 justify-end">
-                  <FavoriteTeamButton
-                    teamId={fixture.awayTeam.id}
-                    teamName={fixture.awayTeam.name}
-                    isFavorite={isAwayTeamFavorite}
-                    size="sm"
-                  />
-                  <p className={isAwayTeamFavorite ? "font-medium truncate text-yellow-400" : "font-medium truncate"}>
-                    {fixture.awayTeam.name}
-                  </p>
-                </div>
-                {isFinished && fixture.awayScore !== null && (
-                  <p className="text-2xl font-bold text-primary mt-1">
-                    {fixture.awayScore}
-                  </p>
+                {isLive && (
+                  <Badge className="mt-2 bg-[#a3e635] text-black hover:bg-[#a3e635] animate-pulse font-black text-[10px] px-2 py-0">
+                    AO VIVO
+                  </Badge>
+                )}
+                {isFinished && (
+                  <span className="mt-2 text-[10px] font-bold text-muted-foreground uppercase bg-white/5 px-2 py-0.5 rounded">
+                    Encerrado
+                  </span>
                 )}
               </div>
+            )}
+          </div>
+
+          {/* Away Team */}
+          <div className="flex flex-col items-center flex-1 space-y-3">
+            <div className="relative h-16 w-16 md:h-20 md:w-20 drop-shadow-2xl">
+              {fixture.awayTeam.logo ? (
+                <Image
+                  src={fixture.awayTeam.logo}
+                  alt={fixture.awayTeam.name}
+                  fill
+                  className="object-contain"
+                />
+              ) : (
+                <div className="w-full h-full bg-accent/20 rounded-full flex items-center justify-center text-2xl font-bold">
+                  {fixture.awayTeam.name[0]}
+                </div>
+              )}
             </div>
+            <span className="text-sm font-bold text-center line-clamp-2 min-h-[2.5rem] flex items-center">
+              {fixture.awayTeam.name}
+            </span>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* Footer - Actions */}
+      <div className="px-4 py-4 mt-auto flex items-center justify-between border-t border-white/5 bg-white/[0.01]">
+        <div className="flex items-center gap-1.5 text-muted-foreground max-w-[50%]">
+          <MapPin size={12} className="shrink-0" />
+          <span className="text-[10px] truncate font-medium">
+            {fixture.league.country || "Estádio Indisponível"}
+          </span>
+        </div>
+        <Button 
+          size="sm" 
+          className="bg-[#a3e635] hover:bg-[#a3e635]/90 text-black font-bold text-[11px] gap-2 rounded-lg transition-transform active:scale-95 px-4"
+        >
+          Analisar Partida
+          <ArrowRight size={14} strokeWidth={3} />
+        </Button>
+      </div>
+    </div>
   );
 }
-

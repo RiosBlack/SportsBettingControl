@@ -1,20 +1,31 @@
-import { getTodayFixtures } from "@/lib/actions/fixtures";
+import { getTodayFixtures, syncFixturesByLeagues } from "@/lib/actions/fixtures";
 import { getUserFavoriteLeagues, getUserFavoriteTeams } from "@/lib/actions/favorites";
 import { FixturesPageClient } from "./_components/fixtures-page-client";
+import { NoLeaguesWarning } from "./_components/no-leagues-warning";
 
 export default async function FixturesPage() {
-  // Buscar jogos de hoje para exibir inicialmente
-  const result = await getTodayFixtures();
+  // 1. Buscar ligas favoritas do usuário primeiro
+  const favoriteLeagueIds = await getUserFavoriteLeagues();
+
+  // 2. Se nenhuma liga estiver selecionada, exibir o aviso
+  if (favoriteLeagueIds.length === 0) {
+    return <NoLeaguesWarning />;
+  }
+
+  // 3. Sincronizar jogos das ligas selecionadas para hoje
+  const today = new Date();
+  await syncFixturesByLeagues(today, favoriteLeagueIds);
+
+  // 4. Buscar jogos de hoje filtrados pelas ligas selecionadas
+  const result = await getTodayFixtures(undefined, undefined, favoriteLeagueIds);
   const initialFixtures = result.success && result.data ? result.data : [];
 
-  // Buscar favoritos do usuário
-  const favoriteLeagueIds = await getUserFavoriteLeagues();
+  // Buscar times favoritos para destaque
   const favoriteTeamIds = await getUserFavoriteTeams();
 
   // Log para debug
   if (process.env.NODE_ENV === "development") {
-    console.log(`[FixturesPage] Total fixtures received: ${initialFixtures.length}`);
-    console.log(`[FixturesPage] Favorite leagues: ${favoriteLeagueIds.length}, Favorite teams: ${favoriteTeamIds.length}`);
+    console.log(`[FixturesPage] Favorite leagues: ${favoriteLeagueIds.length}, Matches found: ${initialFixtures.length}`);
   }
 
   return (

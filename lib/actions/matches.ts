@@ -1,6 +1,6 @@
 "use server";
 
-import { getTodayFixtures } from "@/lib/actions/fixtures";
+import { getTodayFixtures, syncDailyFixtures } from "@/lib/actions/fixtures";
 import type { MatchesData, Match } from "@/lib/types/matches";
 
 // Obter jogos do dia do banco de dados
@@ -51,6 +51,11 @@ export async function getTodayMatches(): Promise<MatchesData | null> {
       lastUpdated: new Date().toISOString(),
     };
   }
+}
+
+/** Sincroniza jogos do dia (chamado após login). */
+export async function syncTodayMatches(): Promise<void> {
+  await syncDailyFixtures();
 }
 
 // Buscar jogos por nome do time
