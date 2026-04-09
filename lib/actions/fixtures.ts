@@ -6,6 +6,7 @@ import type {
   SyncFixturesResult,
   Fixture,
 } from "@/lib/types/fixtures";
+import { getUserFavoriteLeagues } from "./favorites";
 
 // Verificar se uma liga específica foi sincronizada para uma data específica
 export async function isLeagueSyncedForDate(
@@ -249,12 +250,18 @@ export async function syncFixturesByLeagues(
 
     let allSynced = true;
     if (!force) {
-      for (const league of leagues) {
-        const alreadySynced = await isLeagueSyncedForDate(league.apiId, targetDate);
-        if (!alreadySynced) {
-          allSynced = false;
-          break;
+      const syncRecord = await prisma.fixtureSync.findUnique({
+        where: { date: targetDate },
+      });
+      if (syncRecord) {
+        // Check if synced in the last hour to allow periodic updates, 
+        // or just consider it synced if the record exists. Over-syncing exhausts API limits.
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+        if (syncRecord.syncedAt > oneHourAgo) {
+          return { success: true, footballCount: 0, syncedAt: syncRecord.syncedAt };
         }
+      } else {
+        allSynced = false;
       }
     } else {
       allSynced = false;
@@ -282,6 +289,13 @@ export async function syncFixturesByLeagues(
         ...footballData,
         response: filteredResponse,
       });
+
+      // Update sync status
+      await prisma.fixtureSync.upsert({
+        where: { date: targetDate },
+        update: { syncedAt: new Date() },
+        create: { date: targetDate },
+      });
     }
 
     return {
@@ -305,7 +319,6 @@ export async function syncDailyFixtures(
   try {
     const today = new Date();
     
-    const { getUserFavoriteLeagues } = await import("./favorites");
     const favoriteLeagueIds = await getUserFavoriteLeagues();
 
     if (favoriteLeagueIds.length > 0) {
