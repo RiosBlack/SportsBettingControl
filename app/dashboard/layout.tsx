@@ -12,12 +12,12 @@ export default function DashboardLayout({
     <SidebarProvider>
       <AppSidebar />
       <FixturesSync />
-      <main className="flex-1 flex flex-col min-h-screen w-full">
-        <div className="border-b p-4 flex items-center justify-between">
+      <main className="flex-1 flex flex-col h-screen overflow-hidden w-full">
+        <div className="border-b p-4 flex items-center justify-between shrink-0">
           <SidebarTrigger />
           <ModeToggle />
         </div>
-        <div className="flex-1 overflow-auto w-full">
+        <div className="flex-1 min-h-0 overflow-auto w-full flex flex-col">
           {children}
         </div>
       </main>

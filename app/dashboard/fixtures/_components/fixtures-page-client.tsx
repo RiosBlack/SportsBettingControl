@@ -75,7 +75,7 @@ export function FixturesPageClient({ initialFixtures, favoriteLeagueIds, favorit
   }, [fixtures, searchTerm]);
 
   return (
-    <div className="h-[calc(100vh-4rem)] bg-[#0a0a0a] text-white flex flex-col overflow-hidden">
+    <div className="flex-1 min-h-0 bg-[#0a0a0a] text-white flex flex-col overflow-hidden">
       {/* Header & Date Selector */}
       <div className="bg-[#0a0a0a]/80 backdrop-blur-md border-b border-white/5 pt-6 pb-2 shrink-0">
         <div className="container mx-auto max-w-7xl px-4 md:px-8 space-y-6">
@@ -163,11 +163,6 @@ export function FixturesPageClient({ initialFixtures, favoriteLeagueIds, favorit
       </main>
 
       <style jsx global>{`
-        body {
-          background-color: #0a0a0a !important;
-          overflow: hidden !important;
-        }
-        
         main::-webkit-scrollbar {
           width: 8px;
         }
