@@ -75,9 +75,9 @@ export function FixturesPageClient({ initialFixtures, favoriteLeagueIds, favorit
   }, [fixtures, searchTerm]);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="h-[calc(100vh-4rem)] bg-[#0a0a0a] text-white flex flex-col overflow-hidden">
       {/* Header & Date Selector */}
-      <div className="sticky top-0 z-[5] bg-[#0a0a0a]/80 backdrop-blur-md border-b border-white/5 pt-6 pb-2">
+      <div className="bg-[#0a0a0a]/80 backdrop-blur-md border-b border-white/5 pt-6 pb-2 shrink-0">
         <div className="container mx-auto max-w-7xl px-4 md:px-8 space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
@@ -113,56 +113,77 @@ export function FixturesPageClient({ initialFixtures, favoriteLeagueIds, favorit
         </div>
       </div>
 
-      <main className="container mx-auto max-w-7xl px-4 md:px-8 py-8">
-        {isLoading ? (
-          <LoadingDice />
-        ) : groupedFixtures.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-32 text-center">
-            <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6">
-              <Trophy size={40} className="text-muted-foreground opacity-20" />
+      <main className="flex-1 overflow-y-auto scroll-smooth">
+        <div className="container mx-auto max-w-7xl px-4 md:px-8 py-8 h-full">
+          {isLoading ? (
+            <LoadingDice />
+          ) : groupedFixtures.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center">
+              <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6">
+                <Trophy size={40} className="text-muted-foreground opacity-20" />
+              </div>
+              <h2 className="text-xl font-bold">Nenhuma partida encontrada</h2>
+              <p className="text-muted-foreground max-w-xs mx-auto mt-2">
+                Selecione outra data ou verifique suas ligas favoritas nas configurações.
+              </p>
             </div>
-            <h2 className="text-xl font-bold">Nenhuma partida encontrada</h2>
-            <p className="text-muted-foreground max-w-xs mx-auto mt-2">
-              Selecione outra data ou verifique suas ligas favoritas nas configurações.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-12">
-            {groupedFixtures.map((group) => (
-              <section key={group.league.id} className="space-y-6">
-                <div className="flex items-center gap-3 px-2">
-                  <div className="relative h-6 w-6 shrink-0 shadow-lg">
-                    {group.league.logo && (
-                      <Image
-                        src={group.league.logo}
-                        alt={group.league.name}
-                        fill
-                        className="object-contain"
-                      />
-                    )}
+          ) : (
+            <div className="space-y-12 pb-12">
+              {groupedFixtures.map((group) => (
+                <section key={group.league.id} className="space-y-6">
+                  <div className="flex items-center gap-3 px-2">
+                    <div className="relative h-6 w-6 shrink-0 shadow-lg">
+                      {group.league.logo && (
+                        <Image
+                          src={group.league.logo}
+                          alt={group.league.name}
+                          fill
+                          className="object-contain"
+                        />
+                      )}
+                    </div>
+                    <h2 className="text-lg font-black tracking-tight uppercase flex items-center gap-3">
+                      {group.league.name}
+                      <span className="text-[10px] font-bold text-muted-foreground px-2 py-0.5 rounded bg-white/5 uppercase tracking-widest">
+                        {group.matches.length} {group.matches.length === 1 ? 'Jogo' : 'Jogos'}
+                      </span>
+                    </h2>
                   </div>
-                  <h2 className="text-lg font-black tracking-tight uppercase flex items-center gap-3">
-                    {group.league.name}
-                    <span className="text-[10px] font-bold text-muted-foreground px-2 py-0.5 rounded bg-white/5 uppercase tracking-widest">
-                      {group.matches.length} {group.matches.length === 1 ? 'Jogo' : 'Jogos'}
-                    </span>
-                  </h2>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {group.matches.map((fixture) => (
-                    <MatchCard key={fixture.id} fixture={fixture} />
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
-        )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {group.matches.map((fixture) => (
+                      <MatchCard key={fixture.id} fixture={fixture} />
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          )}
+        </div>
       </main>
 
       <style jsx global>{`
         body {
           background-color: #0a0a0a !important;
+          overflow: hidden !important;
+        }
+        
+        main::-webkit-scrollbar {
+          width: 8px;
+        }
+        
+        main::-webkit-scrollbar-track {
+          background: #0a0a0a;
+        }
+        
+        main::-webkit-scrollbar-thumb {
+          background: #161616;
+          border-radius: 10px;
+          border: 2px solid #0a0a0a;
+        }
+        
+        main::-webkit-scrollbar-thumb:hover {
+          background: #202020;
         }
       `}</style>
     </div>

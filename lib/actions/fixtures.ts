@@ -247,20 +247,41 @@ export async function syncFixturesByLeagues(
       },
     });
 
+    let allSynced = true;
+    if (!force) {
+      for (const league of leagues) {
+        const alreadySynced = await isLeagueSyncedForDate(league.apiId, targetDate);
+        if (!alreadySynced) {
+          allSynced = false;
+          break;
+        }
+      }
+    } else {
+      allSynced = false;
+    }
+
+    if (allSynced) {
+      return { success: true, footballCount: 0, syncedAt: new Date() };
+    }
+
     let totalProcessed = 0;
 
-    for (const league of leagues) {
-      // Verificar se já sincronizou (a menos que force seja true)
-      if (!force) {
-        const alreadySynced = await isLeagueSyncedForDate(league.apiId, targetDate);
-        if (alreadySynced) continue;
-      }
+    // Fazer UMA requisição para buscar todos os jogos da data para economizar cota da API
+    const footballData = await fetchFootballFixtures(dateStr);
+    
+    if (footballData) {
+      const allowedApiIds = new Set(leagues.map((l) => l.apiId));
+      
+      // Filtrar a resposta para manter apenas os jogos das ligas favoritas
+      const filteredResponse = footballData.response.filter((fixture: any) =>
+        allowedApiIds.has(fixture.league.id)
+      );
 
-      const footballData = await fetchFootballFixtures(dateStr, league.apiId);
-      if (footballData) {
-        const count = await processFootballFixtures(footballData);
-        totalProcessed += count;
-      }
+      // Processar e salvar APENAS os jogos filtrados
+      totalProcessed = await processFootballFixtures({
+        ...footballData,
+        response: filteredResponse,
+      });
     }
 
     return {
@@ -282,20 +303,20 @@ export async function syncDailyFixtures(
   force: boolean = false
 ): Promise<SyncFixturesResult> {
   try {
-    const today = new Date().toISOString().split("T")[0];
-    const todayDate = new Date();
-    todayDate.setHours(0, 0, 0, 0);
+    const today = new Date();
+    
+    const { getUserFavoriteLeagues } = await import("./favorites");
+    const favoriteLeagueIds = await getUserFavoriteLeagues();
 
-    // Buscar TODOS os jogos de futebol do dia
-    const footballData = await fetchFootballFixtures(today);
-    const footballCount = footballData
-      ? await processFootballFixtures(footballData)
-      : 0;
+    if (favoriteLeagueIds.length > 0) {
+      return await syncFixturesByLeagues(today, favoriteLeagueIds, force);
+    }
 
     return {
       success: true,
-      footballCount,
+      footballCount: 0,
       syncedAt: new Date(),
+      error: "Nenhuma liga favorita selecionada para sincronizar"
     };
   } catch (error: any) {
     console.error("Error syncing fixtures:", error);
