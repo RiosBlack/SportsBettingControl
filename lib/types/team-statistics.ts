@@ -210,6 +210,7 @@ export interface SyncTeamStatisticsResult {
   success: boolean;
   processed: number;
   skipped: number;
+  cached?: boolean;
   error?: string;
 }
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getTodayFixtures, syncFixturesByLeagues } from "@/lib/actions/fixtures";
+import { getTodayFixtures } from "@/lib/actions/fixtures";
 import { getUserFavoriteLeagues } from "@/lib/actions/favorites";
 import { getTodayStart, parseDateKey } from "@/lib/date-time";
 
@@ -25,13 +25,7 @@ export async function GET(request: Request) {
       }
     }
 
-    // Buscar ligas favoritas do usuário
     const favoriteLeagueIds = await getUserFavoriteLeagues();
-
-    if (favoriteLeagueIds.length > 0) {
-      // Sincronizar ligas selecionadas para a data solicitada
-      await syncFixturesByLeagues(targetDate, favoriteLeagueIds, true);
-    }
 
     const result = await getTodayFixtures(undefined, targetDate, favoriteLeagueIds);
 

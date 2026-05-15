@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import {
   getTeamLeaguesForStats,
   getTeamStatisticsPage,
+  syncTeamStatisticsForTeam,
 } from "@/lib/actions/team-statistics";
 import { TeamStatsPageClient } from "./_components/team-stats-page-client";
 
@@ -48,6 +49,8 @@ export default async function TeamStatsPage({
   const venue = (query.venue ?? "all") as "all" | "home" | "away";
   const limit = query.limit ? Number(query.limit) : 20;
   const season = query.season ? Number(query.season) : leagues[0]?.season;
+
+  await syncTeamStatisticsForTeam({ teamId, leagueId, season });
 
   const statsResult = await getTeamStatisticsPage({
     teamId,

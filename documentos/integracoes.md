@@ -17,10 +17,20 @@ A principal fonte de dados para o sistema de gestão de apostas.
   - **Odds**: Cotações para diversos mercados (pre-match) — planejado.
 
 ### Fluxo de Sincronização
-1. O sistema verifica o modelo `FixtureSync` para saber se a data já foi processada.
-2. Faz chamadas aos endpoints de `/fixtures` e `/leagues`.
-3. Utiliza lógica de `upsert` no Prisma para atualizar dados de times e jogos sem gerar duplicidade.
-4. Após salvar fixtures, executa `syncTeamStatistics` para times das ligas favoritas + times favoritos do usuário (incremental ou backfill da temporada).
+
+#### Estatísticas do time (sob demanda)
+1. Usuário clica em um time (Partidas, Favoritos ou "Ver Stats") → `/dashboard/teams/[teamId]`.
+2. `syncTeamStatisticsForTeam()` verifica `TeamStatsSync` — se já sincronizado no dia civil (`America/Sao_Paulo`), pula a API.
+3. Caso contrário: busca fixtures do time, estatísticas e eventos; persiste em `Match`, `MatchTeamStatistic`.
+4. Filtros na UI e revisitas no mesmo dia leem apenas o banco.
+5. `POST /api/teams/[teamId]/sync?force=true` força nova busca.
+
+#### Partidas (fixtures)
+- Página Partidas e `GET /api/fixtures` leem somente o PostgreSQL.
+- População em lote: botão **Atualizar banco de dados** → `POST /api/database/sync` (usa `FixtureSync` + `syncTeamStatistics` incremental).
+
+#### Cron
+- Agendamento Vercel desativado. Rota `GET /api/cron/daily-sync` permanece para invocação manual com `CRON_SECRET`.
 
 ## 2. Supabase (Opcional/Futuro)
 O diretório `@/lib/supabase` indica uma possível integração para:

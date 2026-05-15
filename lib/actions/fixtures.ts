@@ -7,7 +7,6 @@ import type {
   Fixture,
 } from "@/lib/types/fixtures";
 import { getUserFavoriteLeagues } from "./favorites";
-import { syncTeamStatistics } from "./team-statistics";
 import {
   APP_TIMEZONE,
   formatDateKey,
@@ -253,10 +252,6 @@ export async function syncFixturesByLeagues(
         // or just consider it synced if the record exists. Over-syncing exhausts API limits.
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
         if (syncRecord.syncedAt > oneHourAgo) {
-          await syncTeamStatistics({
-            leagueIds,
-            upToDate: targetDate,
-          });
           return { success: true, footballCount: 0, syncedAt: syncRecord.syncedAt };
         }
       } else {
@@ -294,14 +289,6 @@ export async function syncFixturesByLeagues(
         where: { date: targetDate },
         update: { syncedAt: new Date() },
         create: { date: targetDate },
-      });
-
-      await syncTeamStatistics({
-        leagueIds,
-        upToDate: targetDate,
-        priorityFixtureApiIds: filteredResponse.map(
-          (fixture: { fixture: { id: number } }) => fixture.fixture.id
-        ),
       });
     }
 

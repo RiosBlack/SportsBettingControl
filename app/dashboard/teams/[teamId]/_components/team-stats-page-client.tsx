@@ -165,7 +165,14 @@ export function TeamStatsPageClient({
   const handleSync = async () => {
     setIsLoading(true);
     try {
-      await fetch("/api/teams/statistics/sync?force=true");
+      const qs = new URLSearchParams({
+        leagueId,
+        season: String(season),
+        force: "true",
+      });
+      await fetch(`/api/teams/${team.id}/sync?${qs.toString()}`, {
+        method: "POST",
+      });
       const params = { leagueId, statKey, venue, limit, season };
       await fetchStats(params);
     } finally {

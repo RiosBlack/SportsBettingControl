@@ -121,7 +121,8 @@ export function FixturesPageClient({ initialFixtures, favoriteLeagueIds, favorit
               </div>
               <h2 className="text-xl font-bold">Nenhuma partida encontrada</h2>
               <p className="text-muted-foreground max-w-xs mx-auto mt-2">
-                Selecione outra data ou verifique suas ligas favoritas nas configurações.
+                Use &quot;Atualizar banco&quot; em Configurações → Ligas ou clique em um time
+                para sincronizar partidas e estatísticas.
               </p>
             </div>
           ) : (

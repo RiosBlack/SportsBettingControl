@@ -6,7 +6,6 @@ import { z } from 'zod'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import bcrypt from 'bcryptjs'
-import { syncTodayMatches } from './matches'
 
 // Schemas de validação
 const LoginSchema = z.object({
@@ -62,11 +61,6 @@ export async function authenticate(
         message: 'Credenciais inválidas.',
       }
     }
-
-    // Sincronizar jogos do dia em background (não bloqueia o login)
-    syncTodayMatches().catch(() => {
-      // Erro silencioso - não bloqueia o login
-    })
 
     revalidatePath('/', 'layout')
     redirect('/dashboard')

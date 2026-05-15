@@ -17,7 +17,7 @@ function isAuthorized(request: Request): boolean {
   return cronHeader === secret;
 }
 
-/** Cron diário: fixtures do dia + estatísticas incrementais (só o que falta). */
+/** Sync em lote (fixtures + stats). Cron Vercel desativado em vercel.json; invocação manual via Bearer CRON_SECRET. */
 export async function GET(request: Request) {
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });

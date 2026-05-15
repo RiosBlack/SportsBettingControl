@@ -7,6 +7,7 @@ import {
   formatDateKey,
   formatMatchTime,
   getMatchDayFromUtc,
+  getTodayStart,
   normalizeSelectedDate,
 } from "@/lib/date-time";
 import type {
@@ -541,6 +542,144 @@ async function processFixtureStatistics(
 interface PendingFixture {
   fixture: ApiFootballTeamFixture;
   priority: number;
+}
+
+function wasSyncedToday(syncedAt: Date, today: Date): boolean {
+  return formatDateKey(syncedAt) === formatDateKey(today);
+}
+
+/** Sync de estatísticas de um único time/liga (gatilho: clique no time). */
+export async function syncTeamStatisticsForTeam(params: {
+  teamId: string;
+  leagueId: string;
+  season?: number;
+  force?: boolean;
+  maxFixturesPerRun?: number;
+}): Promise<SyncTeamStatisticsResult> {
+  const {
+    teamId,
+    leagueId,
+    season: seasonParam,
+    force = false,
+    maxFixturesPerRun = MAX_FIXTURE_STATS_PER_SYNC,
+  } = params;
+
+  if (!getApiKey()) {
+    return { success: false, processed: 0, skipped: 0, error: "API_FOOTBALL_KEY não configurada" };
+  }
+
+  try {
+    const team = await prisma.team.findUnique({ where: { id: teamId } });
+    const league = await prisma.league.findUnique({ where: { id: leagueId } });
+
+    if (!team || !league) {
+      return { success: false, processed: 0, skipped: 0, error: "Time ou liga não encontrado" };
+    }
+
+    const season = seasonParam ?? getCurrentSeason();
+    const today = getTodayStart();
+
+    if (!force) {
+      const syncRecord = await prisma.teamStatsSync.findUnique({
+        where: {
+          teamId_leagueId_season: { teamId, leagueId, season },
+        },
+      });
+      if (syncRecord && wasSyncedToday(syncRecord.syncedAt, today)) {
+        const existingCount = await prisma.matchTeamStatistic.count({
+          where: { teamId, leagueId, season },
+        });
+        return {
+          success: true,
+          processed: 0,
+          skipped: existingCount,
+          cached: true,
+        };
+      }
+    }
+
+    const upToDate = today;
+    const upToKey = formatDateKey(upToDate);
+
+    const lastStat = await prisma.matchTeamStatistic.findFirst({
+      where: { teamId, leagueId, season },
+      orderBy: { match: { date: "desc" } },
+      select: { match: { select: { date: true } } },
+    });
+
+    let fixtures: ApiFootballTeamFixture[];
+
+    if (lastStat?.match.date) {
+      const fromDate = formatDateKey(
+        new Date(lastStat.match.date.getTime() + 86400000)
+      );
+      fixtures = await fetchTeamFixtures(
+        team.apiId,
+        league.apiId,
+        season,
+        fromDate,
+        upToKey
+      );
+    } else {
+      fixtures = await fetchTeamFixtures(team.apiId, league.apiId, season);
+      fixtures = fixtures.filter((f) => {
+        const d = getMatchDayFromUtc(f.fixture.date);
+        return d <= normalizeSelectedDate(upToDate);
+      });
+    }
+
+    const finished = fixtures.filter((f) =>
+      FINISHED_STATUSES.includes(f.fixture.status.short)
+    );
+
+    let processed = 0;
+    let skipped = 0;
+    let apiCalls = 0;
+
+    for (const fixture of finished) {
+      if (apiCalls >= maxFixturesPerRun) break;
+
+      const already = await prisma.matchTeamStatistic.findFirst({
+        where: { match: { apiId: fixture.fixture.id }, teamId },
+      });
+      if (already) {
+        skipped++;
+        continue;
+      }
+
+      apiCalls += 3;
+      const ok = await processFixtureStatistics(fixture);
+      if (ok) processed++;
+      else skipped++;
+    }
+
+    const lastMatch = await prisma.matchTeamStatistic.findFirst({
+      where: { teamId, leagueId, season },
+      orderBy: { match: { date: "desc" } },
+      select: { match: { select: { date: true } } },
+    });
+
+    const lastMatchDate = lastMatch?.match.date ?? today;
+
+    await prisma.teamStatsSync.upsert({
+      where: {
+        teamId_leagueId_season: { teamId, leagueId, season },
+      },
+      update: { lastMatchDate, syncedAt: new Date() },
+      create: {
+        teamId,
+        leagueId,
+        season,
+        lastMatchDate,
+      },
+    });
+
+    return { success: true, processed, skipped, cached: false };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Sync failed";
+    console.error("syncTeamStatisticsForTeam error:", error);
+    return { success: false, processed: 0, skipped: 0, error: message };
+  }
 }
 
 export async function syncTeamStatistics(params: {
