@@ -2,6 +2,7 @@
 
 import { getTodayFixtures, syncDailyFixtures } from "@/lib/actions/fixtures";
 import type { MatchesData, Match } from "@/lib/types/matches";
+import { formatDateKey, formatMatchTime } from "@/lib/date-time";
 
 // Obter jogos do dia do banco de dados
 export async function getTodayMatches(): Promise<MatchesData | null> {
@@ -12,7 +13,7 @@ export async function getTodayMatches(): Promise<MatchesData | null> {
     if (!result.success || !result.data) {
       console.warn("Failed to get fixtures from database");
       return {
-        date: new Date().toISOString().split("T")[0],
+        date: formatDateKey(),
         matches: [],
         lastUpdated: new Date().toISOString(),
       };
@@ -28,17 +29,12 @@ export async function getTodayMatches(): Promise<MatchesData | null> {
       competition:
         fixture.league.name +
         (fixture.league.country ? ` - ${fixture.league.country}` : ""),
-      time:
-        fixture.time ||
-        new Date(fixture.utcDate).toLocaleTimeString("pt-BR", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
+      time: fixture.time || formatMatchTime(fixture.utcDate),
       utcDate: fixture.utcDate.toISOString(),
     }));
 
     return {
-      date: new Date().toISOString().split("T")[0],
+      date: formatDateKey(),
       matches,
       lastUpdated: new Date().toISOString(),
     };
@@ -46,7 +42,7 @@ export async function getTodayMatches(): Promise<MatchesData | null> {
     console.error("Error getting matches from database:", error);
     // Retornar estrutura vazia ao invés de null
     return {
-      date: new Date().toISOString().split("T")[0],
+      date: formatDateKey(),
       matches: [],
       lastUpdated: new Date().toISOString(),
     };

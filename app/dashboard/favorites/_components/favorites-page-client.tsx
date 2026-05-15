@@ -8,6 +8,8 @@ import { Star, Search } from "lucide-react";
 import { FavoriteLeagueButton } from "../../fixtures/_components/favorite-league-button";
 import { FavoriteTeamButton } from "../../fixtures/_components/favorite-team-button";
 import Image from "next/image";
+import Link from "next/link";
+import { BarChart3 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface League {
@@ -254,24 +256,38 @@ export function FavoritesPageClient({ initialLeagues, initialTeams }: FavoritesP
                 <Card key={team.id} className={team.isFavorite ? "border-yellow-400" : ""}>
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
-                      {team.logo && (
-                        <div className="relative w-8 h-8">
-                          <Image
-                            src={team.logo}
-                            alt={team.name}
-                            fill
-                            className="object-contain"
-                            onError={(e) => {
-                              e.currentTarget.style.display = "none";
-                            }}
-                          />
+                      <Link
+                        href={`/dashboard/teams/${team.id}`}
+                        className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-90"
+                      >
+                        {team.logo && (
+                          <div className="relative w-8 h-8 shrink-0">
+                            <Image
+                              src={team.logo}
+                              alt={team.name}
+                              fill
+                              className="object-contain"
+                              onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                              }}
+                            />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className={`font-medium truncate ${team.isFavorite ? "text-yellow-400" : ""}`}
+                          >
+                            {team.name}
+                          </p>
                         </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className={`font-medium truncate ${team.isFavorite ? "text-yellow-400" : ""}`}>
-                          {team.name}
-                        </p>
-                      </div>
+                      </Link>
+                      <Link
+                        href={`/dashboard/teams/${team.id}`}
+                        className="text-muted-foreground hover:text-[#a3e635] p-1"
+                        title="Ver estatísticas"
+                      >
+                        <BarChart3 size={18} />
+                      </Link>
                       <FavoriteTeamButton
                         teamId={team.id}
                         teamName={team.name}

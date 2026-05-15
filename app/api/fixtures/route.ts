@@ -1,15 +1,22 @@
 import { NextResponse } from "next/server";
 import { getTodayFixtures, syncFixturesByLeagues } from "@/lib/actions/fixtures";
 import { getUserFavoriteLeagues } from "@/lib/actions/favorites";
+import { getTodayStart, parseDateKey } from "@/lib/date-time";
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const dateParam = searchParams.get("date");
 
-    let targetDate: Date = new Date();
+    let targetDate: Date = getTodayStart();
     if (dateParam) {
-      targetDate = new Date(dateParam);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+        return NextResponse.json(
+          { error: "Data inválida" },
+          { status: 400 }
+        );
+      }
+      targetDate = parseDateKey(dateParam);
       if (isNaN(targetDate.getTime())) {
         return NextResponse.json(
           { error: "Data inválida" },
@@ -23,7 +30,7 @@ export async function GET(request: Request) {
 
     if (favoriteLeagueIds.length > 0) {
       // Sincronizar ligas selecionadas para a data solicitada
-      await syncFixturesByLeagues(targetDate, favoriteLeagueIds);
+      await syncFixturesByLeagues(targetDate, favoriteLeagueIds, true);
     }
 
     const result = await getTodayFixtures(undefined, targetDate, favoriteLeagueIds);

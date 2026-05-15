@@ -29,6 +29,8 @@ Sistema profissional de gestão e controle de apostas esportivas desenvolvido co
 - **Bankroll** 1 --- N **Transaction**
 - **League** 1 --- N **Match**
 - **Team** 1 --- N **Match** (Home/Away)
+- **Match** 1 --- N **MatchTeamStatistic** (por time)
+- **Team** 1 --- N **TeamStatsSync**
 
 ## ⚙️ Configuração Rápida
 1. `pnpm install`
@@ -37,6 +39,7 @@ Sistema profissional de gestão e controle de apostas esportivas desenvolvido co
 4. `pnpm dev`
 
 ## 📅 Changelogs
+- [2026-05-15 - Estatísticas de Clubes](changelogs/2026-05-15-team-statistics.md)
 - [2026-04-08 - Design System Documentation](changelogs/2026-04-08-design-system-documentation.md)
 - [2026-04-08 - Documentação Detalhada do Sistema](changelogs/2026-04-08-detailed-documentation.md)
 - [2026-04-08 - Bug Investigation: Constant DB Queries](changelogs/2026-04-08-bug-investigation-db-queries.md)

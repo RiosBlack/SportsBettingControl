@@ -33,6 +33,28 @@ export async function getUserFavoriteLeagues(): Promise<string[]> {
 /**
  * Buscar IDs dos times favoritos do usuário atual
  */
+/**
+ * Liga favorita de qualquer usuário (para sync diário/cron).
+ */
+export async function getAllFavoriteLeagueIds(): Promise<string[]> {
+  const rows = await prisma.favoriteLeague.findMany({
+    distinct: ["leagueId"],
+    select: { leagueId: true },
+  });
+  return rows.map((r) => r.leagueId);
+}
+
+/**
+ * Times favoritos de qualquer usuário (para sync diário/cron).
+ */
+export async function getAllFavoriteTeamIds(): Promise<string[]> {
+  const rows = await prisma.favoriteTeam.findMany({
+    distinct: ["teamId"],
+    select: { teamId: true },
+  });
+  return rows.map((r) => r.teamId);
+}
+
 export async function getUserFavoriteTeams(): Promise<string[]> {
   try {
     const user = await getCurrentUser();

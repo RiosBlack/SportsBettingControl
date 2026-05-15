@@ -11,12 +11,16 @@ A principal fonte de dados para o sistema de gestão de apostas.
   - **Leagues**: Campeonatos mundiais filtrados por esporte.
   - **Teams**: Informações sobre clubes (nome, logo, ID).
   - **Fixtures (Matches)**: Jogos programados, horários, estádios e placares em tempo real.
-  - **Odds**: Cotações para diversos mercados (pre-match).
+  - **Fixtures Statistics**: Estatísticas por partida (posse, chutes, escanteios, faltas, cartões, etc.) via `/fixtures/statistics`.
+  - **Fixtures Events**: Eventos da partida (gols, cartões) via `/fixtures/events` para indicadores derivados.
+  - **Teams**: Elenco de times por liga/temporada via `/teams`.
+  - **Odds**: Cotações para diversos mercados (pre-match) — planejado.
 
 ### Fluxo de Sincronização
 1. O sistema verifica o modelo `FixtureSync` para saber se a data já foi processada.
 2. Faz chamadas aos endpoints de `/fixtures` e `/leagues`.
 3. Utiliza lógica de `upsert` no Prisma para atualizar dados de times e jogos sem gerar duplicidade.
+4. Após salvar fixtures, executa `syncTeamStatistics` para times das ligas favoritas + times favoritos do usuário (incremental ou backfill da temporada).
 
 ## 2. Supabase (Opcional/Futuro)
 O diretório `@/lib/supabase` indica uma possível integração para:

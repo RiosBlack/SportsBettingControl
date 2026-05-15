@@ -1,5 +1,6 @@
 import { getTodayFixtures, syncFixturesByLeagues } from "@/lib/actions/fixtures";
 import { getUserFavoriteLeagues, getUserFavoriteTeams } from "@/lib/actions/favorites";
+import { getTodayStart } from "@/lib/date-time";
 import { FixturesPageClient } from "./_components/fixtures-page-client";
 import { NoLeaguesWarning } from "./_components/no-leagues-warning";
 
@@ -13,8 +14,8 @@ export default async function FixturesPage() {
   }
 
   // 3. Sincronizar jogos das ligas selecionadas para hoje
-  const today = new Date();
-  await syncFixturesByLeagues(today, favoriteLeagueIds);
+  const today = getTodayStart();
+  await syncFixturesByLeagues(today, favoriteLeagueIds, true);
 
   // 4. Buscar jogos de hoje filtrados pelas ligas selecionadas
   const result = await getTodayFixtures(undefined, undefined, favoriteLeagueIds);

@@ -157,9 +157,12 @@ model Team {
   updatedAt DateTime @updatedAt
 
   // Relacionamentos
-  homeMatches   Match[]         @relation("HomeTeam")
-  awayMatches   Match[]         @relation("AwayTeam")
-  favoriteTeams FavoriteTeam[]
+  homeMatches        Match[]              @relation("HomeTeam")
+  awayMatches        Match[]              @relation("AwayTeam")
+  favoriteTeams      FavoriteTeam[]
+  matchStatistics    MatchTeamStatistic[] @relation("TeamStats")
+  opponentStatistics MatchTeamStatistic[] @relation("OpponentStats")
+  teamStatsSyncs     TeamStatsSync[]
 
   @@index([sport])
   @@index([apiId])
@@ -179,6 +182,7 @@ model League {
   // Relacionamentos
   matches         Match[]
   favoriteLeagues FavoriteLeague[]
+  teamStatsSyncs  TeamStatsSync[]
 
   @@index([sport])
   @@index([apiId])
@@ -193,6 +197,7 @@ model Match {
   time       String? // Horário local (HH:mm)
   utcDate    DateTime // Data/hora UTC
   status     String // NS, LIVE, FT, etc.
+  season     Int?
   // Scores
   homeScore  Int?
   awayScore  Int?
@@ -205,15 +210,63 @@ model Match {
   updatedAt  DateTime @updatedAt
 
   // Relacionamentos
-  homeTeam Team   @relation("HomeTeam", fields: [homeTeamId], references: [id], onDelete: Cascade)
-  awayTeam Team   @relation("AwayTeam", fields: [awayTeamId], references: [id], onDelete: Cascade)
-  league   League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  homeTeam    Team                 @relation("HomeTeam", fields: [homeTeamId], references: [id], onDelete: Cascade)
+  awayTeam    Team                 @relation("AwayTeam", fields: [awayTeamId], references: [id], onDelete: Cascade)
+  league      League               @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  teamStats   MatchTeamStatistic[]
 
   @@index([sport])
   @@index([date])
   @@index([status])
   @@index([apiId])
+  @@index([season])
   @@map("matches")
+}
+
+// ==================== ESTATÍSTICAS DE CLUBES ====================
+
+model MatchTeamStatistic {
+  id             String   @id @default(cuid())
+  matchId        String
+  teamId         String
+  opponentTeamId String
+  leagueId       String
+  season         Int
+  isHome         Boolean
+  stats          Json
+  derived        Json
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  match        Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  team         Team  @relation("TeamStats", fields: [teamId], references: [id], onDelete: Cascade)
+  opponentTeam Team  @relation("OpponentStats", fields: [opponentTeamId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, teamId])
+  @@index([teamId])
+  @@index([matchId])
+  @@index([leagueId])
+  @@index([season])
+  @@map("match_team_statistics")
+}
+
+model TeamStatsSync {
+  id            String   @id @default(cuid())
+  teamId        String
+  leagueId      String
+  season        Int
+  lastMatchDate DateTime @db.Date
+  syncedAt      DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, leagueId, season])
+  @@index([teamId])
+  @@index([leagueId])
+  @@map("team_stats_syncs")
 }
 
 model FixtureSync {

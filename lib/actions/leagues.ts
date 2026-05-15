@@ -108,11 +108,13 @@ export async function updateUserFavoriteLeagues(leagueIds: string[]) {
             userId,
             leagueId,
           })),
+          skipDuplicates: true,
         });
       }
     });
 
     revalidatePath("/dashboard/fixtures");
+    revalidatePath("/dashboard/favorites");
     revalidatePath("/dashboard/settings/leagues");
 
     return { success: true };
@@ -120,6 +122,39 @@ export async function updateUserFavoriteLeagues(leagueIds: string[]) {
     console.error("[updateUserFavoriteLeagues] Erro:", error);
     return { success: false, error: error.message };
   }
+}
+
+/**
+ * Alterna uma liga nos favoritos (salva ou remove).
+ */
+export async function toggleFavoriteLeague(leagueId: string) {
+  const { getUserFavoriteLeagues } = await import("@/lib/actions/favorites");
+  const favorites = await getUserFavoriteLeagues();
+  const next = favorites.includes(leagueId)
+    ? favorites.filter((id) => id !== leagueId)
+    : [...favorites, leagueId];
+
+  return updateUserFavoriteLeagues(next);
+}
+
+export type SaveFavoriteLeaguesState = {
+  success: boolean;
+  error?: string;
+};
+
+/**
+ * Action para formulário HTML (funciona sem hidratação React).
+ */
+export async function saveFavoriteLeaguesForm(
+  _prevState: SaveFavoriteLeaguesState | null,
+  formData: FormData
+): Promise<SaveFavoriteLeaguesState> {
+  const leagueIds = formData
+    .getAll("leagueIds")
+    .map((id) => String(id))
+    .filter(Boolean);
+
+  return updateUserFavoriteLeagues(leagueIds);
 }
 
 /**

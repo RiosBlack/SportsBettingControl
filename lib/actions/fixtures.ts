@@ -7,6 +7,15 @@ import type {
   Fixture,
 } from "@/lib/types/fixtures";
 import { getUserFavoriteLeagues } from "./favorites";
+import { syncTeamStatistics } from "./team-statistics";
+import {
+  APP_TIMEZONE,
+  formatDateKey,
+  formatMatchTime,
+  getMatchDayFromUtc,
+  getTodayStart,
+  normalizeSelectedDate,
+} from "@/lib/date-time";
 
 // Verificar se uma liga específica foi sincronizada para uma data específica
 export async function isLeagueSyncedForDate(
@@ -14,8 +23,7 @@ export async function isLeagueSyncedForDate(
   date: Date
 ): Promise<boolean> {
   try {
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
+    const startOfDay = normalizeSelectedDate(date);
 
     const matchExists = await prisma.match.findFirst({
       where: {
@@ -159,23 +167,9 @@ async function processFootballFixtures(
         processedTeams.add(fixture.teams.away.id);
       }
 
-      // Parse date
       const utcDate = new Date(fixture.fixture.date);
-
-      // Criar data de jogo usando apenas a parte da data (YYYY-MM-DD) em UTC
-      // e converter para data local sem horas para evitar problemas de timezone
-      const utcYear = utcDate.getUTCFullYear();
-      const utcMonth = utcDate.getUTCMonth();
-      const utcDay = utcDate.getUTCDate();
-
-      // Criar data local com a mesma data (sem considerar timezone)
-      const matchDate = new Date(utcYear, utcMonth, utcDay, 0, 0, 0, 0);
-
-      // Extract time
-      const time = utcDate.toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+      const matchDate = getMatchDayFromUtc(utcDate);
+      const time = formatMatchTime(utcDate);
 
       // Upsert Match
       await prisma.match.upsert({
@@ -185,6 +179,7 @@ async function processFootballFixtures(
           time,
           utcDate,
           status: fixture.fixture.status.short,
+          season: fixture.league.season,
           homeScore: fixture.goals.home,
           awayScore: fixture.goals.away,
           homeTeamId: homeTeamId!,
@@ -198,6 +193,7 @@ async function processFootballFixtures(
           time,
           utcDate,
           status: fixture.fixture.status.short,
+          season: fixture.league.season,
           homeScore: fixture.goals.home,
           awayScore: fixture.goals.away,
           homeTeamId: homeTeamId!,
@@ -237,9 +233,8 @@ export async function syncFixturesByLeagues(
   force: boolean = false
 ): Promise<SyncFixturesResult> {
   try {
-    const dateStr = date.toISOString().split("T")[0];
-    const targetDate = new Date(date);
-    targetDate.setHours(0, 0, 0, 0);
+    const targetDate = normalizeSelectedDate(date);
+    const dateStr = formatDateKey(targetDate);
 
     // Buscar as ligas no banco para obter os apiIds
     const leagues = await prisma.league.findMany({
@@ -258,6 +253,10 @@ export async function syncFixturesByLeagues(
         // or just consider it synced if the record exists. Over-syncing exhausts API limits.
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
         if (syncRecord.syncedAt > oneHourAgo) {
+          await syncTeamStatistics({
+            leagueIds,
+            upToDate: targetDate,
+          });
           return { success: true, footballCount: 0, syncedAt: syncRecord.syncedAt };
         }
       } else {
@@ -296,6 +295,14 @@ export async function syncFixturesByLeagues(
         update: { syncedAt: new Date() },
         create: { date: targetDate },
       });
+
+      await syncTeamStatistics({
+        leagueIds,
+        upToDate: targetDate,
+        priorityFixtureApiIds: filteredResponse.map(
+          (fixture: { fixture: { id: number } }) => fixture.fixture.id
+        ),
+      });
     }
 
     return {
@@ -317,8 +324,8 @@ export async function syncDailyFixtures(
   force: boolean = false
 ): Promise<SyncFixturesResult> {
   try {
-    const today = new Date();
-    
+    const today = getTodayStart();
+
     const favoriteLeagueIds = await getUserFavoriteLeagues();
 
     if (favoriteLeagueIds.length > 0) {
@@ -362,25 +369,12 @@ export async function getTodayFixtures(
       };
     }
 
-    // Usar a data fornecida ou hoje como padrão
-    const searchDate = targetDate ? new Date(targetDate) : new Date();
+    const searchDate = targetDate
+      ? normalizeSelectedDate(targetDate)
+      : getTodayStart();
 
-    // Extrair ano, mês e dia da data de busca usando UTC (mesma lógica usada ao salvar)
-    // Isso garante que a busca seja feita pela data correta, independente do timezone
-    const utcYear = searchDate.getUTCFullYear();
-    const utcMonth = searchDate.getUTCMonth();
-    const utcDay = searchDate.getUTCDate();
-
-    // Criar data local com a mesma data UTC (mesma lógica usada ao salvar)
-    const searchDateLocal = new Date(utcYear, utcMonth, utcDay, 0, 0, 0, 0);
-
-    // Também buscar por data UTC equivalente (para jogos salvos antes da correção)
-    const searchDateUTC = new Date(
-      Date.UTC(utcYear, utcMonth, utcDay, 0, 0, 0, 0)
-    );
-
-    const where: any = {
-      OR: [{ date: searchDateLocal }, { date: searchDateUTC }],
+    const where: { date: Date; sport?: string; leagueId?: { in: string[] } } = {
+      date: searchDate,
     };
 
     if (sport) {
@@ -406,17 +400,9 @@ export async function getTodayFixtures(
       // Não usar take/limit - buscar TODOS os jogos
     });
 
-    // Log para debug
     if (process.env.NODE_ENV === "development") {
       console.log(
-        `Found ${matches.length} matches for date ${utcYear}-${String(
-          utcMonth + 1
-        ).padStart(2, "0")}-${String(utcDay).padStart(
-          2,
-          "0"
-        )} (searchDateLocal: ${
-          searchDateLocal.toISOString().split("T")[0]
-        }, searchDateUTC: ${searchDateUTC.toISOString().split("T")[0]})`
+        `Found ${matches.length} matches for ${formatDateKey(searchDate)} (${APP_TIMEZONE})`
       );
     }
 

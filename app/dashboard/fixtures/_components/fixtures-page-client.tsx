@@ -7,6 +7,7 @@ import { LoadingDice } from "./loading-dice";
 import { Trophy, Search, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { Fixture } from "@/lib/types/fixtures";
+import { formatDateKey, getTodayStart } from "@/lib/date-time";
 import Image from "next/image";
 
 interface FixturesPageClientProps {
@@ -16,11 +17,7 @@ interface FixturesPageClientProps {
 }
 
 export function FixturesPageClient({ initialFixtures, favoriteLeagueIds, favoriteTeamIds }: FixturesPageClientProps) {
-  const [selectedDate, setSelectedDate] = useState<Date>(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return today;
-  });
+  const [selectedDate, setSelectedDate] = useState<Date>(getTodayStart);
   const [fixtures, setFixtures] = useState<Fixture[]>(initialFixtures);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -30,7 +27,7 @@ export function FixturesPageClient({ initialFixtures, favoriteLeagueIds, favorit
     const fetchFixtures = async () => {
       setIsLoading(true);
       try {
-        const dateStr = selectedDate.toISOString().split("T")[0];
+        const dateStr = formatDateKey(selectedDate);
         const response = await fetch(`/api/fixtures?date=${dateStr}`);
 
         if (response.ok) {

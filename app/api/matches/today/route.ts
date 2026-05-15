@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { FootballDataResponse, Match } from "@/lib/types/matches";
+import { formatDateKey, formatMatchTime } from "@/lib/date-time";
 
 export async function GET() {
   try {
@@ -13,8 +14,7 @@ export async function GET() {
       );
     }
 
-    // Data de hoje no formato YYYY-MM-DD
-    const today = new Date().toISOString().split("T")[0];
+    const today = formatDateKey();
 
     console.log("Fetching matches for date:", today);
 
@@ -46,10 +46,7 @@ export async function GET() {
       homeLogo: match.homeTeam.crest,
       awayLogo: match.awayTeam.crest,
       competition: match.competition.name,
-      time: new Date(match.utcDate).toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
+      time: formatMatchTime(match.utcDate),
       utcDate: match.utcDate,
     }));
 

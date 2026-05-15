@@ -1,25 +1,27 @@
-"use client";
-
-import { useState, useTransition } from "react";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Loader2, Save } from "lucide-react";
-import { toast } from "sonner";
-import { updateUserFavoriteLeagues } from "@/lib/actions/leagues";
+import { Search, Check, X } from "lucide-react";
+import { toggleFavoriteLeague } from "@/lib/actions/leagues";
 import Image from "next/image";
+import { cn } from "@/lib/utils";
 
-interface League {
+export interface LeagueOption {
   id: string;
   apiId: number;
   name: string;
@@ -28,172 +30,201 @@ interface League {
 }
 
 interface LeagueSelectorProps {
-  allLeagues: League[];
-  initialFavoriteIds: string[];
+  allLeagues: LeagueOption[];
+  favoriteIds: string[];
+  searchQuery?: string;
 }
 
-export function LeagueSelector({ allLeagues, initialFavoriteIds }: LeagueSelectorProps) {
-  const [selectedIds, setSelectedIds] = useState<string[]>(initialFavoriteIds);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isPending, startTransition] = useTransition();
+function LeagueToggleButton({ leagueId, isSaved }: { leagueId: string; isSaved: boolean }) {
+  const toggle = toggleFavoriteLeague.bind(null, leagueId);
 
-  const filteredLeagues = allLeagues.filter((league) =>
-    league.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    league.country?.toLowerCase().includes(searchTerm.toLowerCase())
+  return (
+    <form action={toggle}>
+      <button
+        type="submit"
+        role="checkbox"
+        aria-checked={isSaved}
+        aria-label={isSaved ? "Remover liga salva" : "Salvar liga"}
+        className={cn(
+          "flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors",
+          isSaved
+            ? "bg-[#a3e635] text-black"
+            : "bg-transparent hover:bg-accent/50"
+        )}
+      >
+        {isSaved ? <Check className="h-3 w-3" strokeWidth={3} /> : null}
+      </button>
+    </form>
   );
+}
 
-  const toggleLeague = (id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+export function LeagueSelector({
+  allLeagues,
+  favoriteIds,
+  searchQuery = "",
+}: LeagueSelectorProps) {
+  const favoriteSet = new Set(favoriteIds);
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+
+  const visibleLeagues = allLeagues.filter((league) => {
+    if (!normalizedSearch) return true;
+    return (
+      league.name.toLowerCase().includes(normalizedSearch) ||
+      league.country?.toLowerCase().includes(normalizedSearch)
     );
-  };
+  });
 
-  const handleSave = () => {
-    startTransition(async () => {
-      const result = await updateUserFavoriteLeagues(selectedIds);
-      if (result.success) {
-        toast.success("Configurações salvas com sucesso!");
-      } else {
-        toast.error(result.error || "Erro ao salvar configurações");
-      }
-    });
-  };
+  const savedLeagues = allLeagues.filter((league) => favoriteSet.has(league.id));
 
   return (
     <Card className="w-full border-border bg-card">
       <CardHeader>
-        <CardTitle className="text-2xl font-bold text-foreground">Seleção de Ligas</CardTitle>
-        <CardDescription className="text-muted-foreground">
-          Selecione as ligas que deseja acompanhar no seu dashboard.
+        <CardTitle className="text-2xl font-bold text-foreground">
+          Seleção de Ligas
+        </CardTitle>
+        <CardDescription className="text-muted-foreground mt-1.5">
+          Clique na caixa de seleção para salvar ou remover a liga. As ligas
+          salvas aparecem na lista abaixo e nos jogos do dia.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        <form method="GET" className="relative">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
+            name="q"
+            defaultValue={searchQuery}
             placeholder="Buscar por nome da liga ou país..."
             className="pl-10"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
           />
-        </div>
+        </form>
 
         <div className="rounded-md border border-border">
           <ScrollArea className="h-[500px]">
-            <Table>
-              <TableHeader className="bg-accent/50 sticky top-0 z-10">
-                <TableRow>
-                  <TableHead className="w-[50px]">Ativa</TableHead>
-                  <TableHead className="w-[80px]">Logo</TableHead>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>País</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredLeagues.length === 0 ? (
+            <div className="min-w-full">
+              <Table>
+                <TableHeader className="bg-accent/50 sticky top-0 z-10">
                   <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                      Nenhuma liga encontrada.
-                    </TableCell>
+                    <TableHead className="w-[50px]">Ativa</TableHead>
+                    <TableHead className="w-[80px]">Logo</TableHead>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>País</TableHead>
                   </TableRow>
-                ) : (
-                  filteredLeagues.map((league) => (
-                    <TableRow key={league.id} className="hover:bg-accent/30 transition-colors">
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedIds.includes(league.id)}
-                          onCheckedChange={() => toggleLeague(league.id)}
-                        />
+                </TableHeader>
+                <TableBody>
+                  {visibleLeagues.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={4}
+                        className="h-24 text-center text-muted-foreground"
+                      >
+                        Nenhuma liga encontrada.
                       </TableCell>
-                      <TableCell>
-                        {league.logo && (
-                          <div className="relative h-8 w-8">
-                            <Image
-                              src={league.logo}
-                              alt={league.name}
-                              fill
-                              className="object-contain"
-                            />
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="font-medium">{league.name}</TableCell>
-                      <TableCell className="text-muted-foreground">{league.country}</TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    visibleLeagues.map((league) => {
+                      const isSaved = favoriteSet.has(league.id);
+
+                      return (
+                        <TableRow
+                          key={league.id}
+                          className={cn(
+                            "transition-colors hover:bg-accent/30",
+                            isSaved && "bg-[#a3e635]/10"
+                          )}
+                        >
+                          <TableCell className="w-[50px] align-middle">
+                            <LeagueToggleButton
+                              leagueId={league.id}
+                              isSaved={isSaved}
+                            />
+                          </TableCell>
+                          <TableCell className="align-middle">
+                            {league.logo ? (
+                              <div className="relative h-8 w-8 shrink-0">
+                                <Image
+                                  src={league.logo}
+                                  alt={league.name}
+                                  fill
+                                  className="object-contain"
+                                />
+                              </div>
+                            ) : null}
+                          </TableCell>
+                          <TableCell className="align-middle font-medium">
+                            {league.name}
+                          </TableCell>
+                          <TableCell className="align-middle text-muted-foreground">
+                            {league.country}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </ScrollArea>
         </div>
 
-        {selectedIds.length > 0 && (
-          <div className="pt-6 border-t border-border mt-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
-                {selectedIds.length}
-              </span>
-              Ligas Selecionadas
-            </h3>
+        <div className="pt-6 border-t border-border">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#a3e635] text-[10px] font-bold text-black">
+              {savedLeagues.length}
+            </span>
+            Ligas salvas
+          </h3>
+
+          {savedLeagues.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhuma liga salva ainda. Marque uma liga na tabela acima.
+            </p>
+          ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {allLeagues
-                .filter((l) => selectedIds.includes(l.id))
-                .map((league) => (
-                  <div 
-                    key={league.id} 
-                    className="flex items-center gap-3 p-3 rounded-lg border border-border bg-accent/10 hover:bg-accent/20 transition-colors group"
-                  >
-                    {league.logo && (
-                      <div className="relative h-6 w-6 shrink-0">
-                        <Image
-                          src={league.logo}
-                          alt={league.name}
-                          fill
-                          className="object-contain"
-                        />
-                      </div>
-                    )}
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-sm font-medium truncate">{league.name}</span>
-                      <span className="text-[10px] text-muted-foreground truncate">{league.country}</span>
+              {savedLeagues.map((league) => (
+                <div
+                  key={league.id}
+                  className="flex items-center gap-3 p-3 rounded-lg border border-border bg-accent/10"
+                >
+                  {league.logo && (
+                    <div className="relative h-6 w-6 shrink-0">
+                      <Image
+                        src={league.logo}
+                        alt={league.name}
+                        fill
+                        className="object-contain"
+                      />
                     </div>
+                  )}
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <span className="text-sm font-medium truncate">
+                      {league.name}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground truncate">
+                      {league.country}
+                    </span>
+                  </div>
+                  <form action={toggleFavoriteLeague.bind(null, league.id)}>
                     <Button
+                      type="submit"
                       variant="ghost"
                       size="icon"
-                      className="ml-auto h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-destructive"
-                      onClick={() => toggleLeague(league.id)}
+                      className="h-8 w-8 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      aria-label={`Remover ${league.name}`}
                     >
-                      <span className="sr-only">Remover</span>
-                      ×
+                      <X className="h-4 w-4" />
                     </Button>
-                  </div>
-                ))}
+                  </form>
+                </div>
+              ))}
             </div>
-          </div>
-        )}
-      </CardContent>
-      <CardFooter className="flex justify-between items-center border-t border-border pt-6">
-        <div className="text-sm text-muted-foreground">
-          {selectedIds.length} ligas selecionadas
-        </div>
-        <Button 
-          onClick={handleSave} 
-          disabled={isPending}
-          className="bg-primary text-primary-foreground hover:bg-primary/90"
-        >
-          {isPending ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Salvando...
-            </>
-          ) : (
-            <>
-              <Save className="mr-2 h-4 w-4" />
-              Salvar Configurações
-            </>
           )}
-        </Button>
-      </CardFooter>
+        </div>
+
+        <p className="text-sm text-muted-foreground pt-2">
+          {savedLeagues.length} liga{savedLeagues.length !== 1 ? "s" : ""} salva
+          {savedLeagues.length !== 1 ? "s" : ""}
+        </p>
+      </CardContent>
     </Card>
   );
 }
