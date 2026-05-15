@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { syncTeamStatisticsForTeam } from "@/lib/actions/team-statistics";
+import { DEFAULT_TEAM_STATS_MATCH_LIMIT } from "@/lib/types/team-statistics";
 
 export async function POST(
   request: NextRequest,
@@ -24,11 +25,18 @@ export async function POST(
     );
   }
 
+  const maxFixturesParam = searchParams.get("maxFixturesPerRun");
+  const maxFixturesPerRun = maxFixturesParam
+    ? Number(maxFixturesParam)
+    : 15;
+
   const result = await syncTeamStatisticsForTeam({
     teamId,
     leagueId,
     season: seasonParam ? Number(seasonParam) : undefined,
     force,
+    displayMinGames: DEFAULT_TEAM_STATS_MATCH_LIMIT,
+    maxFixturesPerRun,
   });
 
   if (!result.success) {

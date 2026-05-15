@@ -39,6 +39,7 @@ Sistema profissional de gestão e controle de apostas esportivas desenvolvido co
 4. `pnpm dev`
 
 ## 📅 Changelogs
+- [2026-05-15 - Stats: 10 na tela + temporada no banco](changelogs/2026-05-15-team-stats-full-season.md)
 - [2026-05-15 - Sync sob demanda (clique no time)](changelogs/2026-05-15-on-demand-team-sync.md)
 - [2026-05-15 - Estatísticas de Clubes](changelogs/2026-05-15-team-statistics.md)
 - [2026-04-08 - Design System Documentation](changelogs/2026-04-08-design-system-documentation.md)

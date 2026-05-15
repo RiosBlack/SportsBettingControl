@@ -251,14 +251,16 @@ model MatchTeamStatistic {
 }
 
 model TeamStatsSync {
-  id            String   @id @default(cuid())
-  teamId        String
-  leagueId      String
-  season        Int
-  lastMatchDate DateTime @db.Date
-  syncedAt      DateTime @default(now())
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id               String   @id @default(cuid())
+  teamId           String
+  leagueId         String
+  season           Int
+  lastMatchDate    DateTime @db.Date
+  expectedFixtures Int?
+  seasonComplete   Boolean  @default(false)
+  syncedAt         DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
   league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)

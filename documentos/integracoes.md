@@ -19,11 +19,15 @@ A principal fonte de dados para o sistema de gestão de apostas.
 ### Fluxo de Sincronização
 
 #### Estatísticas do time (sob demanda)
-1. Usuário clica em um time (Partidas, Favoritos ou "Ver Stats") → `/dashboard/teams/[teamId]`.
-2. `syncTeamStatisticsForTeam()` verifica `TeamStatsSync` — se já sincronizado no dia civil (`America/Sao_Paulo`), pula a API.
-3. Caso contrário: busca fixtures do time, estatísticas e eventos; persiste em `Match`, `MatchTeamStatistic`.
-4. Filtros na UI e revisitas no mesmo dia leem apenas o banco.
-5. `POST /api/teams/[teamId]/sync?force=true` força nova busca.
+1. Usuário clica em um time → `/dashboard/teams/[teamId]`.
+2. `getTeamLeaguesForStats()` busca competições do clube via `GET /leagues?team={apiId}&season={year}` e popula o select.
+3. `syncTeamStatisticsForTeam()` para a **liga selecionada**:
+   - Persiste **todos** os jogos finalizados (FT) da temporada em `Match` + `MatchTeamStatistic` (incremental, até `maxFixturesPerRun` por execução).
+   - Prioriza ter **10 jogos** no banco para liberar a UI (`displayMinGames`).
+   - `TeamStatsSync.seasonComplete` quando `statsCount >= expectedFixtures`.
+4. A tabela exibe sempre os **10 últimos jogos** lidos só do PostgreSQL (`getTeamStatisticsFullTable` com `limit=10`).
+5. `POST /api/teams/[teamId]/sync?force=true` continua o backfill (útil após limite 429 da API).
+6. Se `seasonComplete` e sync no mesmo dia (`America/Sao_Paulo`), não chama a API novamente.
 
 #### Partidas (fixtures)
 - Página Partidas e `GET /api/fixtures` leem somente o PostgreSQL.

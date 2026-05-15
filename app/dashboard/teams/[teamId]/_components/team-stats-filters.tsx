@@ -9,45 +9,27 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { RotateCcw } from "lucide-react";
-
-interface LeagueOption {
-  leagueId: string;
-  season: number;
-  league: { id: string; name: string; logo: string | null };
-}
+import type { TeamLeagueOption } from "@/lib/types/team-statistics";
 
 interface TeamStatsFiltersProps {
-  leagues: LeagueOption[];
+  leagues: TeamLeagueOption[];
   leagueId: string;
   venue: "all" | "home" | "away";
-  limit: number;
   season: number;
-  statLabel: string;
   isLoading?: boolean;
   onLeagueChange: (leagueId: string, season: number) => void;
   onVenueChange: (venue: "all" | "home" | "away") => void;
-  onLimitChange: (limit: number) => void;
   onSync?: () => void;
 }
-
-const LIMIT_OPTIONS = [
-  { value: 5, label: "Últimos 5" },
-  { value: 10, label: "Últimos 10" },
-  { value: 20, label: "Últimos 20" },
-  { value: 30, label: "Últimos 30" },
-];
 
 export function TeamStatsFilters({
   leagues,
   leagueId,
   venue,
-  limit,
   season,
-  statLabel,
   isLoading,
   onLeagueChange,
   onVenueChange,
-  onLimitChange,
   onSync,
 }: TeamStatsFiltersProps) {
   const selectedLeague = leagues.find((l) => l.leagueId === leagueId);
@@ -55,7 +37,9 @@ export function TeamStatsFilters({
   return (
     <div className="flex flex-col gap-3 border-b border-white/5 bg-[#161616]/50 px-4 py-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-bold text-white">{statLabel}</h2>
+        <h2 className="text-sm font-bold text-white">
+          Estatísticas por partida · últimos 10 jogos
+        </h2>
         {onSync && (
           <Button
             size="sm"
@@ -79,13 +63,16 @@ export function TeamStatsFilters({
               onLeagueChange(value, item?.season ?? season);
             }}
           >
-            <SelectTrigger className="w-[180px] h-8 bg-[#0a0a0a] border-white/10 text-xs">
-              <SelectValue placeholder="Liga" />
+            <SelectTrigger className="w-[220px] h-8 bg-[#0a0a0a] border-white/10 text-xs">
+              <SelectValue placeholder="Competição" />
             </SelectTrigger>
             <SelectContent>
               {leagues.map((item) => (
                 <SelectItem key={item.leagueId} value={item.leagueId}>
                   {item.league.name}
+                  {item.statsCount != null && item.statsCount > 0
+                    ? ` (${item.statsCount}${item.seasonComplete ? " ✓" : ""})`
+                    : ""}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -106,25 +93,10 @@ export function TeamStatsFilters({
           </SelectContent>
         </Select>
 
-        <Select
-          value={String(limit)}
-          onValueChange={(v) => onLimitChange(Number(v))}
-        >
-          <SelectTrigger className="w-[130px] h-8 bg-[#0a0a0a] border-white/10 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {LIMIT_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={String(opt.value)}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
         {selectedLeague && (
           <span className="text-[11px] text-muted-foreground self-center px-2">
-            Temporada {selectedLeague.season}
+            Temporada {selectedLeague.season}/
+            {String(selectedLeague.season + 1).slice(-2)}
           </span>
         )}
       </div>

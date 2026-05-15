@@ -1,56 +1,26 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TeamStatsHeader } from "./team-stats-header";
-import { TeamStatsSidebar } from "./team-stats-sidebar";
 import { TeamStatsFilters } from "./team-stats-filters";
-import { TeamStatsGrid } from "./team-stats-grid";
+import { TeamStatsFullTable } from "./team-stats-full-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  STAT_CATEGORIES,
-  DERIVED_LABELS,
+  DEFAULT_TEAM_STATS_MATCH_LIMIT,
+  type TeamLeagueOption,
+  type TeamStatisticsFullTableData,
 } from "@/lib/types/team-statistics";
-import type {
-  DerivedStatKey,
-  TeamStatKey,
-  TeamStatisticsPageData,
-} from "@/lib/types/team-statistics";
-
-interface LeagueOption {
-  leagueId: string;
-  season: number;
-  league: { id: string; name: string; logo: string | null; apiId?: number };
-}
 
 interface TeamStatsPageClientProps {
   team: { id: string; name: string; logo: string | null };
-  leagues: LeagueOption[];
-  initialData: TeamStatisticsPageData | null;
+  leagues: TeamLeagueOption[];
+  initialData: TeamStatisticsFullTableData | null;
   initialLeagueId: string;
-  initialStatKey: string;
   initialVenue: "all" | "home" | "away";
-  initialLimit: number;
   initialSeason: number;
-}
-
-function getStatLabel(statKey: string): string {
-  for (const cat of STAT_CATEGORIES) {
-    const found = cat.stats.find((s) => s.key === statKey);
-    if (found) return found.label;
-  }
-  if (statKey in DERIVED_LABELS) {
-    return DERIVED_LABELS[statKey as DerivedStatKey];
-  }
-  return statKey;
-}
-
-function getCategoryForStat(statKey: string): string {
-  for (const cat of STAT_CATEGORIES) {
-    if (cat.stats.some((s) => s.key === statKey)) return cat.id;
-  }
-  if (statKey in DERIVED_LABELS) return "derived";
-  return "shots";
+  syncError?: string;
+  syncWarning?: string;
 }
 
 export function TeamStatsPageClient({
@@ -58,40 +28,33 @@ export function TeamStatsPageClient({
   leagues,
   initialData,
   initialLeagueId,
-  initialStatKey,
   initialVenue,
-  initialLimit,
   initialSeason,
+  syncError,
+  syncWarning: initialSyncWarning,
 }: TeamStatsPageClientProps) {
   const router = useRouter();
-  const [data, setData] = useState<TeamStatisticsPageData | null>(initialData);
+  const [data, setData] = useState<TeamStatisticsFullTableData | null>(initialData);
   const [leagueId, setLeagueId] = useState(initialLeagueId);
-  const [statKey, setStatKey] = useState(initialStatKey);
-  const [activeCategory, setActiveCategory] = useState(
-    getCategoryForStat(initialStatKey)
-  );
   const [venue, setVenue] = useState(initialVenue);
-  const [limit, setLimit] = useState(initialLimit);
   const [season, setSeason] = useState(initialSeason);
   const [isLoading, setIsLoading] = useState(false);
+  const [syncWarning, setSyncWarning] = useState(initialSyncWarning);
 
-  const statLabel = useMemo(() => getStatLabel(statKey), [statKey]);
+  const displayLimit = DEFAULT_TEAM_STATS_MATCH_LIMIT;
 
   const fetchStats = useCallback(
     async (params: {
       leagueId: string;
-      statKey: string;
       venue: "all" | "home" | "away";
-      limit: number;
       season: number;
     }) => {
       setIsLoading(true);
       try {
         const qs = new URLSearchParams({
           leagueId: params.leagueId,
-          statKey: params.statKey,
           venue: params.venue,
-          limit: String(params.limit),
+          limit: String(displayLimit),
           season: String(params.season),
         });
         const res = await fetch(
@@ -107,22 +70,18 @@ export function TeamStatsPageClient({
         setIsLoading(false);
       }
     },
-    [team.id]
+    [team.id, displayLimit]
   );
 
   const updateUrl = useCallback(
     (params: {
       leagueId: string;
-      statKey: string;
       venue: string;
-      limit: number;
       season: number;
     }) => {
       const qs = new URLSearchParams({
         leagueId: params.leagueId,
-        statKey: params.statKey,
         venue: params.venue,
-        limit: String(params.limit),
         season: String(params.season),
       });
       router.replace(`/dashboard/teams/${team.id}?${qs.toString()}`, {
@@ -132,32 +91,17 @@ export function TeamStatsPageClient({
     [router, team.id]
   );
 
-  const handleSelectStat = (key: TeamStatKey | DerivedStatKey, categoryId: string) => {
-    setStatKey(key);
-    setActiveCategory(categoryId);
-    const params = { leagueId, statKey: key, venue, limit, season };
-    updateUrl(params);
-    fetchStats(params);
-  };
-
   const handleLeagueChange = (newLeagueId: string, newSeason: number) => {
     setLeagueId(newLeagueId);
     setSeason(newSeason);
-    const params = { leagueId: newLeagueId, statKey, venue, limit, season: newSeason };
-    updateUrl(params);
-    fetchStats(params);
+    setSyncWarning(undefined);
+    updateUrl({ leagueId: newLeagueId, venue, season: newSeason });
+    router.refresh();
   };
 
   const handleVenueChange = (newVenue: "all" | "home" | "away") => {
     setVenue(newVenue);
-    const params = { leagueId, statKey, venue: newVenue, limit, season };
-    updateUrl(params);
-    fetchStats(params);
-  };
-
-  const handleLimitChange = (newLimit: number) => {
-    setLimit(newLimit);
-    const params = { leagueId, statKey, venue, limit: newLimit, season };
+    const params = { leagueId, venue: newVenue, season };
     updateUrl(params);
     fetchStats(params);
   };
@@ -169,24 +113,37 @@ export function TeamStatsPageClient({
         leagueId,
         season: String(season),
         force: "true",
+        maxFixturesPerRun: "15",
       });
-      await fetch(`/api/teams/${team.id}/sync?${qs.toString()}`, {
+      const syncRes = await fetch(`/api/teams/${team.id}/sync?${qs.toString()}`, {
         method: "POST",
       });
-      const params = { leagueId, statKey, venue, limit, season };
-      await fetchStats(params);
+      const syncJson = await syncRes.json();
+      const resolvedSeason = syncJson.season ?? season;
+      if (resolvedSeason !== season) {
+        setSeason(resolvedSeason);
+      }
+      setSyncWarning(syncJson.warning);
+      if (syncJson.error) {
+        setSyncWarning(syncJson.error);
+      }
+      await fetchStats({ leagueId, venue, season: resolvedSeason });
+      router.refresh();
     } finally {
       setIsLoading(false);
     }
   };
+
+  const bannerMessage = syncError ?? syncWarning;
 
   if (!data && !isLoading) {
     return (
       <div className="flex flex-col h-full bg-[#0a0a0a]">
         <div className="p-8 text-center">
           <h1 className="text-2xl font-black text-white mb-2">{team.name}</h1>
-          <p className="text-muted-foreground mb-6">
-            Carregando estatísticas ou aguardando sincronização...
+          <p className="text-muted-foreground mb-6 max-w-lg mx-auto">
+            {bannerMessage ??
+              "Carregando estatísticas ou aguardando sincronização..."}
           </p>
           <button
             type="button"
@@ -201,44 +158,51 @@ export function TeamStatsPageClient({
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0a0a] min-h-0">
-      {data && <TeamStatsHeader data={data} />}
+    <div className="flex flex-col w-full bg-[#0a0a0a]">
+      {data && (
+        <TeamStatsHeader
+          data={{
+            team: data.team,
+            league: data.league,
+            season: data.season,
+            nextFixture: data.nextFixture,
+            totalMatches: data.totalMatches,
+            columns: [],
+            statKey: "shotsTotal",
+            isDerived: false,
+          }}
+          displayedMatches={data.matches.length}
+        />
+      )}
 
-      <div className="flex flex-1 min-h-0 flex-col lg:flex-row">
-        <TeamStatsSidebar
-          activeStatKey={statKey}
-          activeCategory={activeCategory}
-          onSelectStat={handleSelectStat}
+      <div className="flex flex-col w-full min-w-0">
+        <TeamStatsFilters
+          leagues={leagues}
+          leagueId={leagueId}
+          venue={venue}
+          season={season}
+          isLoading={isLoading}
+          onLeagueChange={handleLeagueChange}
+          onVenueChange={handleVenueChange}
+          onSync={handleSync}
         />
 
-        <div className="flex flex-1 flex-col min-h-0 min-w-0">
-          <TeamStatsFilters
-            leagues={leagues}
-            leagueId={leagueId}
-            venue={venue}
-            limit={limit}
-            season={season}
-            statLabel={statLabel}
-            isLoading={isLoading}
-            onLeagueChange={handleLeagueChange}
-            onVenueChange={handleVenueChange}
-            onLimitChange={handleLimitChange}
-            onSync={handleSync}
-          />
+        {bannerMessage && (
+          <p className="px-4 py-2 text-sm text-amber-400/90 border-b border-white/5">
+            {bannerMessage}
+          </p>
+        )}
 
-          {isLoading ? (
-            <div className="flex-1 p-6 space-y-4">
-              <Skeleton className="h-8 w-full bg-white/5" />
-              <Skeleton className="h-32 w-full bg-white/5" />
-            </div>
-          ) : data ? (
-            <TeamStatsGrid
-              columns={data.columns}
-              isDerived={data.isDerived}
-              statLabel={statLabel}
-            />
-          ) : null}
-        </div>
+        {isLoading ? (
+          <div className="flex-1 p-6 space-y-3">
+            <Skeleton className="h-10 w-full bg-white/5" />
+            {Array.from({ length: 12 }).map((_, i) => (
+              <Skeleton key={i} className="h-8 w-full bg-white/5" />
+            ))}
+          </div>
+        ) : data ? (
+          <TeamStatsFullTable data={data} />
+        ) : null}
       </div>
     </div>
   );

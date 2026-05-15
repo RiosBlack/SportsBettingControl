@@ -1,5 +1,7 @@
 import type { Prisma } from "@prisma/client";
 
+export const DEFAULT_TEAM_STATS_MATCH_LIMIT = 10;
+
 export type TeamStatKey =
   | "possession"
   | "goals"
@@ -177,6 +179,39 @@ export interface ApiFootballTeamsResponse {
   }>;
 }
 
+export interface ApiFootballLeagueByTeamItem {
+  league: {
+    id: number;
+    name: string;
+    logo: string | null;
+    type: string;
+  };
+  country: {
+    name: string;
+    code: string | null;
+    flag: string | null;
+  };
+  seasons: Array<{
+    year: number;
+    start: string;
+    end: string;
+    current: boolean;
+  }>;
+}
+
+export interface TeamLeagueOption {
+  leagueId: string;
+  season: number;
+  statsCount?: number;
+  seasonComplete?: boolean;
+  league: {
+    id: string;
+    name: string;
+    logo: string | null;
+    apiId?: number;
+  };
+}
+
 export interface TeamStatisticsMatchColumn {
   matchId: string;
   matchApiId: number;
@@ -206,11 +241,93 @@ export interface TeamStatisticsPageData {
   totalMatches: number;
 }
 
+export interface TeamStatisticsMatchInfo {
+  matchId: string;
+  matchApiId: number;
+  date: Date;
+  isHome: boolean;
+  homeScore: number | null;
+  awayScore: number | null;
+  opponent: { id: string; name: string; logo: string | null };
+}
+
+export interface TeamStatisticsTableCell {
+  teamValue: number | boolean | null;
+  opponentValue: number | boolean | null;
+}
+
+export interface TeamStatisticsTableRow {
+  key: TeamStatKey | DerivedStatKey;
+  label: string;
+  category: string;
+  isDerived: boolean;
+  format: "number" | "percent" | "boolean";
+  values: TeamStatisticsTableCell[];
+}
+
+export interface TeamStatisticsFullTableData {
+  team: { id: string; apiId: number; name: string; logo: string | null };
+  league: { id: string; apiId: number; name: string; logo: string | null; country: string | null };
+  season: number;
+  nextFixture: TeamStatisticsPageData["nextFixture"];
+  matches: TeamStatisticsMatchInfo[];
+  rows: TeamStatisticsTableRow[];
+  totalMatches: number;
+}
+
+/** Linhas da tabela completa (estilo PlayerStats) — ordem de exibição. */
+export const FULL_TABLE_STAT_ROWS: Array<{
+  key: TeamStatKey | DerivedStatKey;
+  label: string;
+  category: string;
+  isDerived?: boolean;
+  format?: "number" | "percent" | "boolean";
+}> = [
+  { category: "Geral", key: "possession", label: "Posse de bola", format: "percent" },
+  { category: "Gols", key: "goals", label: "Gols" },
+  { category: "Gols", key: "goalsFirstHalf", label: "Gols 1º tempo" },
+  { category: "Gols", key: "goalsSecondHalf", label: "Gols 2º tempo" },
+  { category: "Passes", key: "passes", label: "Passes" },
+  { category: "Passes", key: "passesAccurate", label: "Passes certos" },
+  { category: "Chutes", key: "shotsTotal", label: "Chutes totais" },
+  { category: "Chutes", key: "shotsFirstHalf", label: "Chutes (1º tempo)" },
+  { category: "Chutes", key: "shotsOnTarget", label: "Chutes no gol" },
+  { category: "Chutes", key: "shotsBlocked", label: "Chutes bloqueados" },
+  { category: "Chutes", key: "shotsOffTarget", label: "Chutes fora" },
+  { category: "Escanteios", key: "corners", label: "Escanteios" },
+  { category: "Escanteios", key: "cornersFirstHalf", label: "Escanteios 1º tempo" },
+  { category: "Escanteios", key: "cornersSecondHalf", label: "Escanteios 2º tempo" },
+  { category: "Faltas", key: "fouls", label: "Faltas" },
+  { category: "Faltas", key: "foulsFirstHalf", label: "Faltas (1º tempo)" },
+  { category: "Cartões", key: "yellowCards", label: "Amarelos" },
+  { category: "Cartões", key: "redCards", label: "Vermelhos" },
+  { category: "Cartões", key: "cardsFirstHalf", label: "Cartões 1º tempo" },
+  { category: "Cartões", key: "cardsSecondHalf", label: "Cartões 2º tempo" },
+  { category: "Outros", key: "offsides", label: "Impedimentos" },
+  { category: "Outros", key: "crosses", label: "Cruzamentos" },
+  { category: "Outros", key: "saves", label: "Defesas do goleiro" },
+  { category: "Outros", key: "freeKicks", label: "Faltas (cobradas)" },
+  { category: "Outros", key: "throwIns", label: "Laterais" },
+  { category: "Outros", key: "goalKicks", label: "Tiros de meta" },
+  { category: "Indicadores", key: "btts", label: "Ambos marcam", isDerived: true, format: "boolean" },
+  { category: "Indicadores", key: "scoredFirst", label: "Marcou primeiro", isDerived: true, format: "boolean" },
+  { category: "Indicadores", key: "wonFirstHalf", label: "Venceu 1º tempo", isDerived: true, format: "boolean" },
+  { category: "Indicadores", key: "wonSecondHalf", label: "Venceu 2º tempo", isDerived: true, format: "boolean" },
+  { category: "Indicadores", key: "mostFirstHalfCorners", label: "Mais escanteios 1T", isDerived: true, format: "boolean" },
+  { category: "Indicadores", key: "mostSecondHalfCorners", label: "Mais escanteios 2T", isDerived: true, format: "boolean" },
+];
+
 export interface SyncTeamStatisticsResult {
   success: boolean;
   processed: number;
   skipped: number;
   cached?: boolean;
+  season?: number;
+  displayReady?: boolean;
+  seasonComplete?: boolean;
+  statsCount?: number;
+  expectedFixtures?: number;
+  warning?: string;
   error?: string;
 }
 

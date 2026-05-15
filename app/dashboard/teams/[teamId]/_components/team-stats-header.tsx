@@ -8,10 +8,12 @@ import type { TeamStatisticsPageData } from "@/lib/types/team-statistics";
 
 interface TeamStatsHeaderProps {
   data: TeamStatisticsPageData;
+  displayedMatches?: number;
 }
 
-export function TeamStatsHeader({ data }: TeamStatsHeaderProps) {
+export function TeamStatsHeader({ data, displayedMatches }: TeamStatsHeaderProps) {
   const { team, league, season, nextFixture, totalMatches } = data;
+  const shown = displayedMatches ?? totalMatches;
 
   return (
     <div className="border-b border-white/5 bg-[#0a0a0a] px-6 py-6">
@@ -51,7 +53,7 @@ export function TeamStatsHeader({ data }: TeamStatsHeaderProps) {
               {team.name}
             </h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Estatísticas da equipe · {totalMatches} jogos no banco
+              Exibindo {shown} de {totalMatches} jogos no banco
             </p>
           </div>
         </div>

@@ -38,8 +38,9 @@ export function TeamStatsGrid({
             Nenhum dado para {statLabel}
           </p>
           <p className="text-sm text-muted-foreground max-w-md">
-            As estatísticas são sincronizadas automaticamente ao atualizar os
-            jogos. Aguarde ou force uma sincronização.
+            Clique em &quot;Sincronizar stats&quot; para buscar dados na API.
+            No plano gratuito da API-Football, temporadas recentes podem não
+            estar disponíveis.
           </p>
         </div>
       </div>
