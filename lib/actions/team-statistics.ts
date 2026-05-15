@@ -1300,7 +1300,7 @@ export async function getTeamStatisticsFullTable(params: {
   leagueId: string;
   season?: number;
   venue?: "all" | "home" | "away";
-  limit?: number;
+  limit?: number | "all";
 }): Promise<{ success: boolean; data?: TeamStatisticsFullTableData; error?: string }> {
   try {
     const {
@@ -1337,7 +1337,7 @@ export async function getTeamStatisticsFullTable(params: {
         opponentTeam: true,
       },
       orderBy: { match: { date: "desc" } },
-      take: limit,
+      ...(limit !== "all" ? { take: limit } : {}),
     });
 
     const opponentRecords = await prisma.matchTeamStatistic.findMany({

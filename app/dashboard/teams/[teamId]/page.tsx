@@ -5,7 +5,12 @@ import {
   getTeamStatisticsFullTable,
   syncTeamStatisticsForTeam,
 } from "@/lib/actions/team-statistics";
-import { DEFAULT_TEAM_STATS_MATCH_LIMIT } from "@/lib/types/team-statistics";
+import {
+  matchLimitToDisplayMinGames,
+  parseTeamStatsMatchLimit,
+  parseTeamStatsVenue,
+  type TeamStatsFiltersState,
+} from "@/lib/types/team-statistics";
 import { TeamStatsPageClient } from "./_components/team-stats-page-client";
 
 interface TeamStatsPageProps {
@@ -14,6 +19,7 @@ interface TeamStatsPageProps {
     leagueId?: string;
     venue?: string;
     season?: string;
+    limit?: string;
   }>;
 }
 
@@ -29,7 +35,12 @@ export default async function TeamStatsPage({
 
   const seasonParam = query.season ? Number(query.season) : undefined;
   const leagues = await getTeamLeaguesForStats(teamId, seasonParam);
-  const leagueId = query.leagueId ?? leagues[0]?.leagueId;
+  const requestedLeagueId = query.leagueId ?? leagues[0]?.leagueId;
+  const leagueId =
+    requestedLeagueId &&
+    leagues.some((l) => l.leagueId === requestedLeagueId)
+      ? requestedLeagueId
+      : leagues[0]?.leagueId;
 
   if (!leagueId) {
     return (
@@ -46,14 +57,22 @@ export default async function TeamStatsPage({
   }
 
   const selectedLeague = leagues.find((l) => l.leagueId === leagueId) ?? leagues[0];
-  const venue = (query.venue ?? "all") as "all" | "home" | "away";
+  const venue = parseTeamStatsVenue(query.venue);
   const season = seasonParam ?? selectedLeague?.season ?? leagues[0]?.season;
+  const matchLimit = parseTeamStatsMatchLimit(query.limit);
+
+  const initialFilters: TeamStatsFiltersState = {
+    leagueId,
+    season,
+    venue,
+    matchLimit,
+  };
 
   const syncResult = await syncTeamStatisticsForTeam({
     teamId,
     leagueId,
     season,
-    displayMinGames: DEFAULT_TEAM_STATS_MATCH_LIMIT,
+    displayMinGames: matchLimitToDisplayMinGames(matchLimit),
     maxFixturesPerRun: 8,
   });
   const resolvedSeason = syncResult.season ?? season;
@@ -63,21 +82,24 @@ export default async function TeamStatsPage({
     leagueId,
     season: resolvedSeason,
     venue,
-    limit: DEFAULT_TEAM_STATS_MATCH_LIMIT,
+    limit: matchLimit,
   });
 
   const leaguesForClient = leagues.map((item) =>
     item.leagueId === leagueId ? { ...item, season: resolvedSeason } : item
   );
 
+  const filtersForClient: TeamStatsFiltersState = {
+    ...initialFilters,
+    season: resolvedSeason,
+  };
+
   return (
     <TeamStatsPageClient
       team={team}
       leagues={leaguesForClient}
       initialData={statsResult.success ? statsResult.data! : null}
-      initialLeagueId={leagueId}
-      initialVenue={venue}
-      initialSeason={resolvedSeason}
+      initialFilters={filtersForClient}
       syncError={syncResult.error}
       syncWarning={syncResult.warning}
     />

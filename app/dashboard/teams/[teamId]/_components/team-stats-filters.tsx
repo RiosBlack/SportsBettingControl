@@ -9,37 +9,41 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { RotateCcw } from "lucide-react";
-import type { TeamLeagueOption } from "@/lib/types/team-statistics";
+import {
+  getMatchLimitLabel,
+  matchLimitToQueryValue,
+  TEAM_STATS_MATCH_LIMIT_OPTIONS,
+  type TeamLeagueOption,
+  type TeamStatsFiltersState,
+} from "@/lib/types/team-statistics";
 
 interface TeamStatsFiltersProps {
   leagues: TeamLeagueOption[];
-  leagueId: string;
-  venue: "all" | "home" | "away";
-  season: number;
+  filters: TeamStatsFiltersState;
   isLoading?: boolean;
   onLeagueChange: (leagueId: string, season: number) => void;
-  onVenueChange: (venue: "all" | "home" | "away") => void;
+  onMatchLimitChange: (matchLimit: TeamStatsFiltersState["matchLimit"]) => void;
+  onVenueChange: (venue: TeamStatsFiltersState["venue"]) => void;
   onSync?: () => void;
 }
 
 export function TeamStatsFilters({
   leagues,
-  leagueId,
-  venue,
-  season,
+  filters,
   isLoading,
   onLeagueChange,
+  onMatchLimitChange,
   onVenueChange,
   onSync,
 }: TeamStatsFiltersProps) {
+  const { leagueId, season, venue, matchLimit } = filters;
   const selectedLeague = leagues.find((l) => l.leagueId === leagueId);
+  const sectionTitle = `Estatísticas por partida · ${getMatchLimitLabel(matchLimit)}`;
 
   return (
     <div className="flex flex-col gap-3 border-b border-white/5 bg-[#161616]/50 px-4 py-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-bold text-white">
-          Estatísticas por partida · últimos 10 jogos
-        </h2>
+        <h2 className="text-sm font-bold text-white">{sectionTitle}</h2>
         {onSync && (
           <Button
             size="sm"
@@ -64,7 +68,7 @@ export function TeamStatsFilters({
             }}
           >
             <SelectTrigger className="w-[220px] h-8 bg-[#0a0a0a] border-white/10 text-xs">
-              <SelectValue placeholder="Competição" />
+              <SelectValue placeholder="Liga" />
             </SelectTrigger>
             <SelectContent>
               {leagues.map((item) => (
@@ -80,9 +84,26 @@ export function TeamStatsFilters({
         )}
 
         <Select
-          value={venue}
-          onValueChange={(v) => onVenueChange(v as "all" | "home" | "away")}
+          value={matchLimitToQueryValue(matchLimit)}
+          onValueChange={(value) =>
+            onMatchLimitChange(
+              value === "all" ? "all" : value === "20" ? 20 : 10
+            )
+          }
         >
+          <SelectTrigger className="w-[130px] h-8 bg-[#0a0a0a] border-white/10 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {TEAM_STATS_MATCH_LIMIT_OPTIONS.map((option) => (
+              <SelectItem key={String(option)} value={matchLimitToQueryValue(option)}>
+                {option === "all" ? "Todos" : `${option} jogos`}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={venue} onValueChange={(v) => onVenueChange(v as typeof venue)}>
           <SelectTrigger className="w-[120px] h-8 bg-[#0a0a0a] border-white/10 text-xs">
             <SelectValue />
           </SelectTrigger>

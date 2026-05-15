@@ -2,6 +2,58 @@ import type { Prisma } from "@prisma/client";
 
 export const DEFAULT_TEAM_STATS_MATCH_LIMIT = 10;
 
+export const TEAM_STATS_MATCH_LIMIT_OPTIONS = [10, 20, "all"] as const;
+
+export type TeamStatsMatchLimit =
+  (typeof TEAM_STATS_MATCH_LIMIT_OPTIONS)[number];
+
+export type TeamStatsVenue = "all" | "home" | "away";
+
+export interface TeamStatsFiltersState {
+  leagueId: string;
+  season: number;
+  venue: TeamStatsVenue;
+  matchLimit: TeamStatsMatchLimit;
+}
+
+export function parseTeamStatsMatchLimit(
+  value: string | undefined
+): TeamStatsMatchLimit {
+  if (value === "all" || value === "20") return value;
+  return DEFAULT_TEAM_STATS_MATCH_LIMIT;
+}
+
+export function matchLimitToQueryValue(limit: TeamStatsMatchLimit): string {
+  return String(limit);
+}
+
+export function parseTeamStatsVenue(value: string | undefined): TeamStatsVenue {
+  if (value === "home" || value === "away") return value;
+  return "all";
+}
+
+export function matchLimitToDisplayMinGames(limit: TeamStatsMatchLimit): number {
+  if (limit === "all") return 50;
+  return limit;
+}
+
+export function buildTeamStatsSearchParams(
+  state: TeamStatsFiltersState
+): URLSearchParams {
+  return new URLSearchParams({
+    leagueId: state.leagueId,
+    venue: state.venue,
+    season: String(state.season),
+    limit: matchLimitToQueryValue(state.matchLimit),
+  });
+}
+
+export function getMatchLimitLabel(limit: TeamStatsMatchLimit): string {
+  if (limit === "all") return "todos os jogos da temporada";
+  if (limit === 20) return "últimos 20 jogos";
+  return "últimos 10 jogos";
+}
+
 export type TeamStatKey =
   | "possession"
   | "goals"

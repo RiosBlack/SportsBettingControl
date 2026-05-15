@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { syncTeamStatisticsForTeam } from "@/lib/actions/team-statistics";
-import { DEFAULT_TEAM_STATS_MATCH_LIMIT } from "@/lib/types/team-statistics";
+import {
+  DEFAULT_TEAM_STATS_MATCH_LIMIT,
+  matchLimitToDisplayMinGames,
+  parseTeamStatsMatchLimit,
+} from "@/lib/types/team-statistics";
 
 export async function POST(
   request: NextRequest,
@@ -30,12 +34,20 @@ export async function POST(
     ? Number(maxFixturesParam)
     : 15;
 
+  const displayMinGamesParam = searchParams.get("displayMinGames");
+  const matchLimit = parseTeamStatsMatchLimit(
+    searchParams.get("limit") ?? undefined
+  );
+  const displayMinGames = displayMinGamesParam
+    ? Number(displayMinGamesParam)
+    : matchLimitToDisplayMinGames(matchLimit);
+
   const result = await syncTeamStatisticsForTeam({
     teamId,
     leagueId,
     season: seasonParam ? Number(seasonParam) : undefined,
     force,
-    displayMinGames: DEFAULT_TEAM_STATS_MATCH_LIMIT,
+    displayMinGames: displayMinGames || DEFAULT_TEAM_STATS_MATCH_LIMIT,
     maxFixturesPerRun,
   });
 
