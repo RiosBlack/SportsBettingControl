@@ -1,7 +1,6 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { getBankrolls } from '@/lib/actions/bankroll'
-import { getTodayMatches } from '@/lib/actions/matches'
 import { CreateBetForm } from './_components/create-bet-form'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
@@ -14,13 +13,8 @@ export default async function NewBetPage() {
     redirect('/login')
   }
 
-  const [bankrollsResult, matchesData] = await Promise.all([
-    getBankrolls(),
-    getTodayMatches(),
-  ])
-  
+  const bankrollsResult = await getBankrolls()
   const bankrollsData = bankrollsResult.data || []
-  const matches = matchesData?.matches || []
 
   if (bankrollsData.length === 0) {
     return (
@@ -42,7 +36,6 @@ export default async function NewBetPage() {
     )
   }
 
-  // Converter Decimal para number para evitar erro de serialização
   const bankrolls = bankrollsData.map(b => ({
     ...b,
     initialBalance: Number(b.initialBalance),
@@ -51,8 +44,7 @@ export default async function NewBetPage() {
 
   return (
     <div className="container mx-auto max-w-4xl p-6">
-      <CreateBetForm bankrolls={bankrolls} matches={matches} />
+      <CreateBetForm bankrolls={bankrolls} />
     </div>
   )
 }
-

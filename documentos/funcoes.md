@@ -1,6 +1,6 @@
 # Funções e Server Actions
 
-A lógica de backend do RiosBlack é centralizada em **Server Actions**, permitindo uma comunicação tipada entre Frontend e Backend sem a necessidade de APIs REST manuais.
+A lógica de backend do Betting Control é centralizada em **Server Actions**, permitindo uma comunicação tipada entre Frontend e Backend sem a necessidade de APIs REST manuais.
 
 ## 1. Módulo de Autenticação (`auth.ts`)
 - `registerUser`: Criação de novo usuário com hash de senha.
@@ -22,14 +22,11 @@ A lógica de backend do RiosBlack é centralizada em **Server Actions**, permiti
 - `deleteBet`: Remove o registro e estorna o saldo se necessário (regra customizável).
 - `settleBet`: Finaliza uma aposta (`WIN`, `LOSS`, `VOID`, etc.) e processa o lucro/prejuízo no saldo da banca.
 
-## 5. Módulo de Fixtures (`fixtures.ts`)
-- `syncDailyFixtures`: Orquestra a busca na API-Football e o salvamento em lote no banco local.
-- `getMatchesByDate`: Filtra jogos armazenados por data e esporte.
+## 5. Módulo de Mercados (`market.ts`)
+- `createMarket`: Cadastra novo mercado de aposta.
+- `getMarkets`: Lista mercados disponíveis.
 
 ## 6. Módulo de Estatísticas (`stats.ts`)
-- `getGlobalStats`: Calcula ROI, Win Rate e Profit Global.
-- `getPeriodStats`: Agrupamentos por dia/semana/mês para gráficos (Recharts).
-
-## 7. Módulo de Favoritos (`favorites.ts`)
-- `toggleFavoriteLeague`: Adiciona/Remove liga dos favoritos.
-- `toggleFavoriteTeam`: Adiciona/Remove time dos favoritos.
+- `getUserStats`: Calcula ROI, Win Rate e Profit Global.
+- `getStatsByDateRange`: Agrupamentos por período para gráficos (Recharts).
+- `getBankrollStats`: Estatísticas por banca.

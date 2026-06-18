@@ -24,10 +24,8 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   // Relacionamentos
-  bankrolls       Bankroll[]
-  bets            Bet[]
-  favoriteLeagues FavoriteLeague[]
-  favoriteTeams   FavoriteTeam[]
+  bankrolls Bankroll[]
+  bets      Bet[]
 
   @@map("users")
 }
@@ -46,7 +44,7 @@ model Bankroll {
   updatedAt      DateTime @updatedAt
 
   // Relacionamentos
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   bets         Bet[]
   transactions Transaction[]
 
@@ -145,142 +143,6 @@ enum BetResult {
   HALF_LOSS // Meia derrota (Asian Handicap)
 }
 
-// ==================== JOGOS DO DIA ====================
-
-model Team {
-  id        String   @id @default(cuid())
-  apiId     Int      @unique // ID da API (API-Football ou API-Sports)
-  name      String
-  logo      String?
-  sport     Sport    @default(FUTEBOL)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relacionamentos
-  homeMatches        Match[]              @relation("HomeTeam")
-  awayMatches        Match[]              @relation("AwayTeam")
-  favoriteTeams      FavoriteTeam[]
-  matchStatistics    MatchTeamStatistic[] @relation("TeamStats")
-  opponentStatistics MatchTeamStatistic[] @relation("OpponentStats")
-  teamStatsSyncs     TeamStatsSync[]
-
-  @@index([sport])
-  @@index([apiId])
-  @@map("teams")
-}
-
-model League {
-  id        String   @id @default(cuid())
-  apiId     Int      @unique // ID da API
-  name      String
-  logo      String?
-  country   String?
-  sport     Sport    @default(FUTEBOL)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relacionamentos
-  matches         Match[]
-  favoriteLeagues FavoriteLeague[]
-  teamStatsSyncs  TeamStatsSync[]
-
-  @@index([sport])
-  @@index([apiId])
-  @@map("leagues")
-}
-
-model Match {
-  id         String   @id @default(cuid())
-  apiId      Int      @unique // ID da API
-  sport      Sport    @default(FUTEBOL)
-  date       DateTime @db.Date
-  time       String? // Horário local (HH:mm)
-  utcDate    DateTime // Data/hora UTC
-  status     String // NS, LIVE, FT, etc.
-  season     Int?
-  // Scores
-  homeScore  Int?
-  awayScore  Int?
-  // Relacionamentos
-  homeTeamId String
-  awayTeamId String
-  leagueId   String
-  // Timestamps
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  // Relacionamentos
-  homeTeam    Team                 @relation("HomeTeam", fields: [homeTeamId], references: [id], onDelete: Cascade)
-  awayTeam    Team                 @relation("AwayTeam", fields: [awayTeamId], references: [id], onDelete: Cascade)
-  league      League               @relation(fields: [leagueId], references: [id], onDelete: Cascade)
-  teamStats   MatchTeamStatistic[]
-
-  @@index([sport])
-  @@index([date])
-  @@index([status])
-  @@index([apiId])
-  @@index([season])
-  @@map("matches")
-}
-
-// ==================== ESTATÍSTICAS DE CLUBES ====================
-
-model MatchTeamStatistic {
-  id             String   @id @default(cuid())
-  matchId        String
-  teamId         String
-  opponentTeamId String
-  leagueId       String
-  season         Int
-  isHome         Boolean
-  stats          Json
-  derived        Json
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  match        Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  team         Team  @relation("TeamStats", fields: [teamId], references: [id], onDelete: Cascade)
-  opponentTeam Team  @relation("OpponentStats", fields: [opponentTeamId], references: [id], onDelete: Cascade)
-
-  @@unique([matchId, teamId])
-  @@index([teamId])
-  @@index([matchId])
-  @@index([leagueId])
-  @@index([season])
-  @@map("match_team_statistics")
-}
-
-model TeamStatsSync {
-  id               String   @id @default(cuid())
-  teamId           String
-  leagueId         String
-  season           Int
-  lastMatchDate    DateTime @db.Date
-  expectedFixtures Int?
-  seasonComplete   Boolean  @default(false)
-  syncedAt         DateTime @default(now())
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
-
-  @@unique([teamId, leagueId, season])
-  @@index([teamId])
-  @@index([leagueId])
-  @@map("team_stats_syncs")
-}
-
-model FixtureSync {
-  id        String   @id @default(cuid())
-  date      DateTime @unique @db.Date
-  syncedAt  DateTime @default(now())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("fixture_syncs")
-}
-
 // ==================== TRANSAÇÕES DE BANCA ====================
 
 enum TransactionType {
@@ -304,36 +166,4 @@ model Transaction {
   @@index([type])
   @@index([createdAt])
   @@map("transactions")
-}
-
-// ==================== FAVORITOS ====================
-
-model FavoriteLeague {
-  id        String   @id @default(cuid())
-  userId    String
-  leagueId  String
-  createdAt DateTime @default(now())
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, leagueId])
-  @@index([userId])
-  @@index([leagueId])
-  @@map("favorite_leagues")
-}
-
-model FavoriteTeam {
-  id        String   @id @default(cuid())
-  userId    String
-  teamId    String
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, teamId])
-  @@index([userId])
-  @@index([teamId])
-  @@map("favorite_teams")
 }

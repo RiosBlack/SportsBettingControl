@@ -1,6 +1,6 @@
 # Arquitetura do Sistema
 
-O sistema RiosBlack Sports Betting Control utiliza uma arquitetura moderna baseada em Next.js 15, seguindo padrões de desenvolvimento robustos e escaláveis.
+O sistema Betting Control utiliza uma arquitetura moderna baseada em Next.js 15, seguindo padrões de desenvolvimento robustos e escaláveis.
 
 ## Core Stack
 - **Framework**: Next.js 15 (App Router)

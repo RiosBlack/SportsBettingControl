@@ -7,18 +7,13 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { Home, Wallet, BarChart3, Plus, Calendar, Settings } from "lucide-react";
+import { Home, Wallet, BarChart3, Plus } from "lucide-react";
 
 const menuItems = [
   {
     title: "Dashboard",
     url: "/dashboard",
     icon: Home,
-  },
-  {
-    title: "Jogos do Dia",
-    url: "/dashboard/fixtures",
-    icon: Calendar,
   },
   {
     title: "Bancas",
@@ -35,11 +30,6 @@ const menuItems = [
     url: "/dashboard/bets/new",
     icon: Plus,
   },
-  {
-    title: "Configurações",
-    url: "/dashboard/settings/leagues",
-    icon: Settings,
-  },
 ];
 
 export function AppSidebarNav() {
@@ -48,7 +38,6 @@ export function AppSidebarNav() {
   return (
     <SidebarMenu>
       {menuItems.map((item) => {
-        // Para destacar item ativo, verifica se o pathname corresponde exatamente ou começa com a URL
         const isActive = pathname === item.url ||
           (item.url !== "/dashboard" && pathname.startsWith(item.url));
         return (
@@ -66,4 +55,3 @@ export function AppSidebarNav() {
     </SidebarMenu>
   );
 }
-

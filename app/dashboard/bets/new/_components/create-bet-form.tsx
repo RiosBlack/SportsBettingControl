@@ -12,10 +12,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle, Plus, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { MatchCombobox } from '@/components/match-combobox'
 import { DatePicker } from '@/components/date-picker'
 import { MarketSelect } from './market-select'
-import type { Match } from '@/lib/types/matches'
 
 interface Bankroll {
   id: string
@@ -30,10 +28,9 @@ interface Bankroll {
 
 interface CreateBetFormProps {
   bankrolls: Bankroll[]
-  matches: Match[]
 }
 
-export function CreateBetForm({ bankrolls, matches }: CreateBetFormProps) {
+export function CreateBetForm({ bankrolls }: CreateBetFormProps) {
   const [eventValue, setEventValue] = useState('')
   const [competitionValue, setCompetitionValue] = useState('')
   const [eventDate, setEventDate] = useState<Date>(new Date())
@@ -162,28 +159,15 @@ export function CreateBetForm({ bankrolls, matches }: CreateBetFormProps) {
           {/* Evento */}
           <div className="space-y-2">
             <Label htmlFor="event">Evento *</Label>
-            {matches.length > 0 ? (
-              <>
-                <MatchCombobox
-                  matches={matches}
-                  value={eventValue}
-                  onChange={setEventValue}
-                  onCompetitionChange={setCompetitionValue}
-                  disabled={pending}
-                />
-                <input type="hidden" name="event" value={eventValue} required />
-              </>
-            ) : (
-              <Input
-                id="event"
-                name="event"
-                placeholder="Ex: Flamengo x Palmeiras"
-                required
-                disabled={pending}
-                value={eventValue}
-                onChange={(e) => setEventValue(e.target.value)}
-              />
-            )}
+            <Input
+              id="event"
+              name="event"
+              placeholder="Ex: Flamengo x Palmeiras"
+              required
+              disabled={pending}
+              value={eventValue}
+              onChange={(e) => setEventValue(e.target.value)}
+            />
           </div>
 
           {/* Competição */}

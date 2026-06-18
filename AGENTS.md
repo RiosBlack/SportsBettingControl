@@ -1,9 +1,10 @@
-# RiosBlack Sports Betting Control
+# Betting Control
 
 ## 📑 Documentação Detalhada
 Para informações específicas sobre cada módulo do sistema, acesse os links abaixo:
 
 - [🏗️ Arquitetura](documentos/arquitetura.md) - Visão técnica e padrões de projeto.
+- [🔀 Fluxos de Backend](documentos/fluxos-backend.md) - Diagramas de requests internas e Server Actions.
 - [🛣️ Rotas](documentos/rotas.md) - Mapeamento de endpoints e páginas.
 - [💼 Regras de Negócio](documentos/regras-de-negocio.md) - Lógicas e restrições do sistema.
 - [🔐 Segurança](documentos/seguranca.md) - Autenticação e proteção de dados.
@@ -27,18 +28,17 @@ Sistema profissional de gestão e controle de apostas esportivas desenvolvido co
 - **User** 1 --- N **Bet**
 - **Bankroll** 1 --- N **Bet**
 - **Bankroll** 1 --- N **Transaction**
-- **League** 1 --- N **Match**
-- **Team** 1 --- N **Match** (Home/Away)
-- **Match** 1 --- N **MatchTeamStatistic** (por time)
-- **Team** 1 --- N **TeamStatsSync**
+- **Market** 1 --- N **Bet**
 
 ## ⚙️ Configuração Rápida
 1. `pnpm install`
-2. Configure o `.env` (DATABASE_URL, AUTH_SECRET, API_FOOTBALL_KEY)
-3. `pnpm dlx prisma db push`
+2. Configure o `.env` (DATABASE_URL, AUTH_SECRET)
+3. `pnpm db:migrate`
 4. `pnpm dev`
 
 ## 📅 Changelogs
+- [2026-06-18 - Rebrand: Betting Control](changelogs/2026-06-18-rebrand-betting-control.md)
+- [2026-05-15 - Documentação: Fluxos de Backend](changelogs/2026-05-15-backend-flows-documentation.md)
 - [2026-05-15 - Stats: 10 na tela + temporada no banco](changelogs/2026-05-15-team-stats-full-season.md)
 - [2026-05-15 - Sync sob demanda (clique no time)](changelogs/2026-05-15-on-demand-team-sync.md)
 - [2026-05-15 - Estatísticas de Clubes](changelogs/2026-05-15-team-statistics.md)
