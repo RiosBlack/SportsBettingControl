@@ -31,11 +31,25 @@ export const BetResultEnum = z.enum([
   'HALF_LOSS',
 ])
 
+export const SelectedSportEventSchema = z.object({
+  source: z.enum(['API_FOOTBALL', 'FOOTBALL_DATA']),
+  externalId: z.string().min(1),
+  sport: SportEnum,
+  homeTeamName: z.string().min(1),
+  awayTeamName: z.string().min(1),
+  homeTeamLogo: z.string().nullable().optional(),
+  awayTeamLogo: z.string().nullable().optional(),
+  competition: z.string().min(1),
+  eventDate: z.coerce.date(),
+})
+
 export const CreateBetSchema = z.object({
   bankrollId: z.string({ required_error: 'Banca é obrigatória' }),
   sport: SportEnum.default('FUTEBOL'),
   event: z.string().min(3, 'Nome do evento deve ter no mínimo 3 caracteres'),
   competition: z.string().optional(),
+  selectedEvent: SelectedSportEventSchema.optional(),
+  sportEventId: z.string().optional(),
   marketId: z.string({ required_error: 'Mercado é obrigatório' }),
   selection: z.string().optional().default(''),
   odds: z.coerce
@@ -85,6 +99,7 @@ export const FilterBetsSchema = z.object({
 })
 
 export type CreateBetInput = z.infer<typeof CreateBetSchema>
+export type SelectedSportEventInput = z.infer<typeof SelectedSportEventSchema>
 export type UpdateBetInput = z.infer<typeof UpdateBetSchema>
 export type SettleBetInput = z.infer<typeof SettleBetSchema>
 export type FilterBetsInput = z.infer<typeof FilterBetsSchema>

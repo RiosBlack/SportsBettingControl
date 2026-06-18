@@ -29,6 +29,7 @@ Sistema profissional de gestão e controle de apostas esportivas desenvolvido co
 - **Bankroll** 1 --- N **Bet**
 - **Bankroll** 1 --- N **Transaction**
 - **Market** 1 --- N **Bet**
+- **SportEvent** 1 --- N **Bet**
 
 ## ⚙️ Configuração Rápida
 1. `pnpm install`
@@ -37,6 +38,7 @@ Sistema profissional de gestão e controle de apostas esportivas desenvolvido co
 4. `pnpm dev`
 
 ## 📅 Changelogs
+- [2026-06-18 - Busca de Eventos com APIs](changelogs/2026-06-18-event-search-apis.md)
 - [2026-06-18 - Rebrand: Betting Control](changelogs/2026-06-18-rebrand-betting-control.md)
 - [2026-05-15 - Documentação: Fluxos de Backend](changelogs/2026-05-15-backend-flows-documentation.md)
 - [2026-05-15 - Stats: 10 na tela + temporada no banco](changelogs/2026-05-15-team-stats-full-season.md)

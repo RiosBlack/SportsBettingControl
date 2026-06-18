@@ -68,10 +68,35 @@ model Market {
 
 // ==================== APOSTAS ====================
 
+model SportEvent {
+  id           String      @id @default(cuid())
+  externalId   String?
+  source       EventSource
+  sport        Sport       @default(FUTEBOL)
+  homeTeamName String
+  awayTeamName String
+  homeTeamLogo String?
+  awayTeamLogo String?
+  competition  String
+  eventDate    DateTime
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  bets Bet[]
+
+  @@unique([source, externalId])
+  @@index([homeTeamName])
+  @@index([awayTeamName])
+  @@index([competition])
+  @@index([eventDate])
+  @@map("sport_events")
+}
+
 model Bet {
   id          String     @id @default(cuid())
   userId      String
   bankrollId  String
+  sportEventId String?
   // Informações da aposta
   sport       Sport      @default(FUTEBOL)
   event       String // Nome do evento (ex: "Flamengo x Palmeiras")
@@ -96,13 +121,15 @@ model Bet {
   updatedAt   DateTime   @updatedAt
 
   // Relacionamentos
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bankroll Bankroll @relation(fields: [bankrollId], references: [id], onDelete: Cascade)
-  market   Market?  @relation(fields: [marketId], references: [id], onDelete: Restrict)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bankroll   Bankroll    @relation(fields: [bankrollId], references: [id], onDelete: Cascade)
+  market     Market?     @relation(fields: [marketId], references: [id], onDelete: Restrict)
+  sportEvent SportEvent? @relation(fields: [sportEventId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([bankrollId])
   @@index([marketId])
+  @@index([sportEventId])
   @@index([status])
   @@index([sport])
   @@index([eventDate])
@@ -110,6 +137,12 @@ model Bet {
 }
 
 // ==================== ENUMS ====================
+
+enum EventSource {
+  API_FOOTBALL
+  FOOTBALL_DATA
+  MANUAL
+}
 
 enum Sport {
   FUTEBOL

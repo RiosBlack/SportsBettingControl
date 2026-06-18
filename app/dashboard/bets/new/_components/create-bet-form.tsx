@@ -14,6 +14,8 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { DatePicker } from '@/components/date-picker'
 import { MarketSelect } from './market-select'
+import { EventSearchCombobox } from '@/components/event-search-combobox'
+import type { CreateBetInput, SelectedSportEventInput } from '@/lib/validations/bet'
 
 interface Bankroll {
   id: string
@@ -35,6 +37,9 @@ export function CreateBetForm({ bankrolls }: CreateBetFormProps) {
   const [competitionValue, setCompetitionValue] = useState('')
   const [eventDate, setEventDate] = useState<Date>(new Date())
   const [marketId, setMarketId] = useState<string>('')
+  const [sport, setSport] = useState<CreateBetInput['sport']>('FUTEBOL')
+  const [selectedEvent, setSelectedEvent] = useState<SelectedSportEventInput | null>(null)
+  const [sportEventId, setSportEventId] = useState<string | null>(null)
   const router = useRouter()
 
   const [state, formAction, pending] = useActionState(
@@ -42,9 +47,11 @@ export function CreateBetForm({ bankrolls }: CreateBetFormProps) {
       try {
         const result = await createBet({
           bankrollId: formData.get('bankrollId') as string,
-          sport: formData.get('sport') as any,
+          sport,
           event: formData.get('event') as string,
           competition: formData.get('competition') as string || undefined,
+          selectedEvent: selectedEvent ?? undefined,
+          sportEventId: sportEventId ?? undefined,
           marketId: marketId || (formData.get('marketId') as string),
           selection: '', // Campo removido - não é mais necessário
           odds: Number(formData.get('odds')),
@@ -113,7 +120,16 @@ export function CreateBetForm({ bankrolls }: CreateBetFormProps) {
             {/* Esporte */}
             <div className="space-y-2">
               <Label htmlFor="sport">Esporte *</Label>
-              <Select name="sport" defaultValue="FUTEBOL" required>
+              <Select
+                name="sport"
+                value={sport}
+                onValueChange={(value) => {
+                  setSport(value as CreateBetInput['sport'])
+                  setSelectedEvent(null)
+                  setSportEventId(null)
+                }}
+                required
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -159,15 +175,20 @@ export function CreateBetForm({ bankrolls }: CreateBetFormProps) {
           {/* Evento */}
           <div className="space-y-2">
             <Label htmlFor="event">Evento *</Label>
-            <Input
-              id="event"
-              name="event"
-              placeholder="Ex: Flamengo x Palmeiras"
-              required
-              disabled={pending}
+            <EventSearchCombobox
               value={eventValue}
-              onChange={(e) => setEventValue(e.target.value)}
+              sport={sport}
+              onValueChange={setEventValue}
+              onCompetitionChange={setCompetitionValue}
+              onEventDateChange={setEventDate}
+              onSelectedEventChange={setSelectedEvent}
+              onSportEventIdChange={setSportEventId}
+              disabled={pending}
             />
+            <input id="event" name="event" type="hidden" value={eventValue} required />
+            <p className="text-xs text-muted-foreground">
+              Digite o nome de um time ou país para ver os últimos 5 jogos.
+            </p>
           </div>
 
           {/* Competição */}

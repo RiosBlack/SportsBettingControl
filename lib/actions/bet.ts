@@ -13,6 +13,7 @@ import {
   type SettleBetInput,
   type FilterBetsInput,
 } from "@/lib/validations/bet";
+import { upsertSportEventFromSelection } from "@/lib/integrations/sport-events";
 
 // Criar nova aposta
 export async function createBet(data: CreateBetInput) {
@@ -43,11 +44,22 @@ export async function createBet(data: CreateBetInput) {
 
     // Criar a aposta e atualizar o saldo em uma transação
     const result = await prisma.$transaction(async (tx) => {
+      let sportEventId: string | undefined = validatedData.sportEventId
+
+      if (!sportEventId && validatedData.selectedEvent) {
+        const sportEvent = await upsertSportEventFromSelection(
+          validatedData.selectedEvent,
+          tx
+        )
+        sportEventId = sportEvent.id
+      }
+
       // Criar aposta
       const bet = await tx.bet.create({
         data: {
           userId: user.dbUser.id,
           bankrollId: validatedData.bankrollId,
+          sportEventId,
           sport: validatedData.sport,
           event: validatedData.event,
           competition: validatedData.competition,
