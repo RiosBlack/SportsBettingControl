@@ -253,9 +253,9 @@ export async function updateBankrollBalance(data: UpdateBankrollBalanceInput) {
 
     // Converter Decimal para number para evitar erro de serialização
     const bankrollData = {
-      ...bankroll,
-      initialBalance: Number(bankroll.initialBalance),
-      currentBalance: Number(bankroll.currentBalance),
+      ...result,
+      initialBalance: Number(result.initialBalance),
+      currentBalance: Number(result.currentBalance),
     };
 
     return { success: true, data: bankrollData };

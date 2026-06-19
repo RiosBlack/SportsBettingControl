@@ -1,8 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface Transaction {
   id: string;
@@ -22,6 +25,32 @@ interface TransactionsListProps {
 }
 
 export function TransactionsList({ transactions, showBankrollName = false }: TransactionsListProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Transações</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {Array.from({ length: Math.min(transactions.length, 3) }).map((_, index) => (
+              <div
+                key={index}
+                className="h-[72px] rounded-lg border bg-muted/20 animate-pulse"
+              />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (transactions.length === 0) {
     return (
       <Card>
@@ -86,13 +115,9 @@ export function TransactionsList({ transactions, showBankrollName = false }: Tra
                         {transaction.description}
                       </p>
                     )}
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(transaction.createdAt).toLocaleDateString("pt-BR", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
+                    <p className="text-xs text-muted-foreground mt-1" suppressHydrationWarning>
+                      {format(new Date(transaction.createdAt), "dd/MM/yyyy, HH:mm", {
+                        locale: ptBR,
                       })}
                     </p>
                   </div>
