@@ -67,6 +67,19 @@ export interface UserStats {
   roi: number
   winRate: number
   avgOdds: number
+  wonProfit: number
+  lostProfit: number
+  otherProfit: number
+  pendingStake: number
+}
+
+export interface BetProfitSummary {
+  wonProfit: number
+  lostProfit: number
+  otherProfit: number
+  profitLoss: number
+  pendingStake: number
+  pendingCount: number
 }
 
 export interface SportStats {

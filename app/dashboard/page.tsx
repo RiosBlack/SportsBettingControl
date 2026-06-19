@@ -3,12 +3,13 @@ import { redirect } from 'next/navigation'
 import {
   getUserStats,
   getRecentBets,
+  getBetProfitSummaries,
 } from '@/lib/actions/stats'
 import { getBankrolls } from '@/lib/actions/bankroll'
+import { getAllTransactions } from '@/lib/actions/transaction'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
-  TrendingUp,
   Target,
   Wallet,
   Trophy,
@@ -19,6 +20,17 @@ import {
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import PeriodStatsCard from './_components/period-stats-card'
+import { BetProfitLossSummary } from './_components/bet-profit-loss-summary'
+import type { BetProfitSummary } from '@/types'
+
+const emptyBetSummary: BetProfitSummary = {
+  wonProfit: 0,
+  lostProfit: 0,
+  otherProfit: 0,
+  profitLoss: 0,
+  pendingStake: 0,
+  pendingCount: 0,
+}
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -27,15 +39,43 @@ export default async function DashboardPage() {
     redirect('/login')
   }
 
-  const [statsResult, bankrollsResult, recentBetsResult] = await Promise.all([
-    getUserStats(),
-    getBankrolls(),
-    getRecentBets(5),
-  ])
+  const [statsResult, bankrollsResult, recentBetsResult, profitSummariesResult, transactionsResult] =
+    await Promise.all([
+      getUserStats(),
+      getBankrolls(),
+      getRecentBets(5),
+      getBetProfitSummaries(),
+      getAllTransactions(),
+    ])
 
   const stats = statsResult.data
   const bankrolls = bankrollsResult.data || []
   const recentBets = recentBetsResult.data || []
+  const betSummariesByBankroll =
+    profitSummariesResult.success && profitSummariesResult.data
+      ? profitSummariesResult.data.byBankroll
+      : {}
+  const transactions =
+    transactionsResult.success && transactionsResult.data
+      ? transactionsResult.data
+      : []
+  const depositsByBankroll = transactions
+    .filter((t) => t.type === 'DEPOSIT')
+    .reduce<Record<string, number>>((acc, t) => {
+      acc[t.bankrollId] = (acc[t.bankrollId] ?? 0) + t.amount
+      return acc
+    }, {})
+
+  const globalProfitSummary: BetProfitSummary = stats
+    ? {
+        wonProfit: stats.wonProfit,
+        lostProfit: stats.lostProfit,
+        otherProfit: stats.otherProfit,
+        profitLoss: stats.totalProfit,
+        pendingStake: stats.pendingStake,
+        pendingCount: stats.pendingBets,
+      }
+    : emptyBetSummary
 
   const totalBankrollBalance = bankrolls.reduce(
     (sum, b) => sum + Number(b.currentBalance),
@@ -103,15 +143,17 @@ export default async function DashboardPage() {
               <CardTitle className="text-sm font-medium">
                 ROI
               </CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <BarChart3 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-2">
               <div className={`text-2xl font-bold ${(stats?.roi || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {(stats?.roi || 0) >= 0 ? '+' : ''}{stats?.roi?.toFixed(2) || 0}%
               </div>
-              <p className="text-xs text-muted-foreground">
-                R$ {stats?.totalProfit?.toFixed(2) || '0.00'} de lucro
-              </p>
+              <BetProfitLossSummary
+                summary={globalProfitSummary}
+                size="sm"
+                align="left"
+              />
             </CardContent>
           </Card>
         </div>
@@ -151,15 +193,20 @@ export default async function DashboardPage() {
               ) : (
                 <div className="space-y-4">
                   {bankrolls.slice(0, 3).map((bankroll) => {
-                    const profitLoss = Number(bankroll.currentBalance) - Number(bankroll.initialBalance)
-                    const profitLossPercent = Number(bankroll.initialBalance) > 0
-                      ? (profitLoss / Number(bankroll.initialBalance)) * 100
-                      : 0
+                    const betSummary =
+                      betSummariesByBankroll[bankroll.id] ?? emptyBetSummary
+                    const totalDeposits = depositsByBankroll[bankroll.id] ?? 0
+                    const totalInvestment =
+                      Number(bankroll.initialBalance) + totalDeposits
+                    const profitLossPercent =
+                      totalInvestment > 0
+                        ? (betSummary.profitLoss / totalInvestment) * 100
+                        : 0
 
                     return (
                       <div
                         key={bankroll.id}
-                        className="flex items-center justify-between p-4 border rounded-lg"
+                        className="flex items-start justify-between gap-4 p-4 border rounded-lg"
                       >
                         <div>
                           <div className="flex items-center gap-2">
@@ -172,14 +219,15 @@ export default async function DashboardPage() {
                             {bankroll._count.bets} {bankroll._count.bets === 1 ? 'aposta' : 'apostas'}
                           </p>
                         </div>
-                        <div className="text-right">
+                        <div className="text-right shrink-0">
                           <p className="font-bold">
                             R$ {Number(bankroll.currentBalance).toFixed(2)}
                           </p>
-                          <p className={`text-sm ${profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {profitLoss >= 0 ? '+' : ''}
-                            R$ {profitLoss.toFixed(2)} ({profitLossPercent.toFixed(1)}%)
-                          </p>
+                          <BetProfitLossSummary
+                            summary={betSummary}
+                            percent={profitLossPercent}
+                            size="sm"
+                          />
                         </div>
                       </div>
                     )

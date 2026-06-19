@@ -10,6 +10,10 @@ Este documento descreve as principais lógicas e restrições aplicadas ao siste
   - `DEPOSIT`: Aumenta o saldo atual da banca.
   - `WITHDRAW`: Diminui o saldo atual da banca.
 
+- **Investimento Total (exibição)**: Saldo inicial da banca + soma de transações `DEPOSIT`.
+- **Lucro/Prejuízo (exibição)**: Resultado das apostas finalizadas (`Σ profit`), com composição ganhas/perdidas. Não usa diferença de saldo contábil.
+- **Apostas pendentes (observação)**: Exibe a soma de `stake` das apostas com status `PENDENTE` como valor em jogo.
+
 ## 2. Gestão de Apostas (Bets)
 - **Vínculo**: Toda aposta deve estar vinculada a uma Banca (Bankroll) e ao Usuário autenticado.
 - **Evento manual**: Evento e competição são informados pelo usuário (campos texto), sem dependência de APIs externas.
@@ -22,6 +26,7 @@ Este documento descreve as principais lógicas e restrições aplicadas ao siste
 - **Resultados (Result)**: Refinamento do status para tratar casos como `HALF_WIN` ou `HALF_LOSS`.
 
 ## 3. Estatísticas e ROI
-- **ROI (Return on Investment)**: Calculado com base no lucro total dividido pelo valor total investido (Stake).
+- **Lucro/Prejuízo exibido**: Soma do campo `profit` das apostas finalizadas (ganhas − perdidas + cashout/anuladas).
+- **ROI (Return on Investment)**: Calculado com base no lucro total dividido pelo valor total apostado em apostas finalizadas (Stake).
 - **Win Rate**: Porcentagem de acerto baseada apenas em apostas finalizadas (Win vs Loss).
 - **Filtros de Período**: Cálculos executados em tempo real filtrados por Hoje, 7 dias, 30 dias ou Todos.

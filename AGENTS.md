@@ -38,6 +38,8 @@ Sistema profissional de gestão e controle de apostas esportivas desenvolvido co
 4. `pnpm dev`
 
 ## 📅 Changelogs
+- [2026-06-19 - Lucro/Prejuízo baseado em apostas + pendentes](changelogs/2026-06-19-bet-profit-loss-display.md)
+- [2026-06-19 - Investimento Total: saldo inicial + depósitos](changelogs/2026-06-19-bankroll-total-investment.md)
 - [2026-06-19 - Cashout no Diálogo Finalizar Aposta](changelogs/2026-06-19-bet-cashout-settle.md)
 - [2026-06-19 - Wizard interativo na importação por print](changelogs/2026-06-19-bet-import-wizard.md)
 - [2026-06-19 - Campo Seleção no Formulário de Aposta](changelogs/2026-06-19-bet-selection-field.md)

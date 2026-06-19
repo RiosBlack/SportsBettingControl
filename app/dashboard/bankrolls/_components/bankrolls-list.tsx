@@ -17,10 +17,21 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { TrendingUp, TrendingDown, Minus, Settings, Loader2 } from 'lucide-react'
+import { Minus, Settings, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { DepositDialog } from './deposit-dialog'
 import { WithdrawDialog } from './withdraw-dialog'
+import { BetProfitLossSummary } from '@/app/dashboard/_components/bet-profit-loss-summary'
+import type { BetProfitSummary } from '@/types'
+
+const emptyBetSummary: BetProfitSummary = {
+  wonProfit: 0,
+  lostProfit: 0,
+  otherProfit: 0,
+  profitLoss: 0,
+  pendingStake: 0,
+  pendingCount: 0,
+}
 
 interface Bankroll {
   id: string
@@ -35,9 +46,15 @@ interface Bankroll {
 
 interface BankrollsListProps {
   bankrolls: Bankroll[]
+  depositsByBankroll?: Record<string, number>
+  betSummariesByBankroll?: Record<string, BetProfitSummary>
 }
 
-export function BankrollsList({ bankrolls }: BankrollsListProps) {
+export function BankrollsList({
+  bankrolls,
+  depositsByBankroll = {},
+  betSummariesByBankroll = {},
+}: BankrollsListProps) {
   const [isPending, startTransition] = useTransition()
 
   const toggleActive = (bankroll: Bankroll) => {
@@ -70,12 +87,14 @@ export function BankrollsList({ bankrolls }: BankrollsListProps) {
   return (
     <div className="grid gap-6 md:grid-cols-2">
       {bankrolls.map((bankroll) => {
-        const profitLoss = bankroll.currentBalance - bankroll.initialBalance
-        const profitLossPercent = bankroll.initialBalance > 0
-          ? (profitLoss / bankroll.initialBalance) * 100
+        const totalDeposits = depositsByBankroll[bankroll.id] ?? 0
+        const totalInvestment = bankroll.initialBalance + totalDeposits
+        const betSummary = betSummariesByBankroll[bankroll.id] ?? emptyBetSummary
+        const profitLossPercent = totalInvestment > 0
+          ? (betSummary.profitLoss / totalInvestment) * 100
           : 0
-        const progressPercent = bankroll.initialBalance > 0
-          ? (bankroll.currentBalance / bankroll.initialBalance) * 100
+        const progressPercent = totalInvestment > 0
+          ? (bankroll.currentBalance / totalInvestment) * 100
           : 0
 
         return (
@@ -113,27 +132,19 @@ export function BankrollsList({ bankrolls }: BankrollsListProps) {
               </div>
 
               {/* Lucro/Prejuízo */}
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Lucro/Prejuízo</span>
-                <div className="text-right">
-                  <div className={`flex items-center gap-1 font-semibold ${profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {profitLoss >= 0 ? (
-                      <TrendingUp className="h-4 w-4" />
-                    ) : (
-                      <TrendingDown className="h-4 w-4" />
-                    )}
-                    {profitLoss >= 0 ? '+' : ''}R$ {profitLoss.toFixed(2)}
-                  </div>
-                  <div className={`text-xs ${profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {profitLoss >= 0 ? '+' : ''}{profitLossPercent.toFixed(1)}%
-                  </div>
-                </div>
+              <div className="flex items-start justify-between gap-4">
+                <span className="text-sm text-muted-foreground shrink-0">Lucro/Prejuízo</span>
+                <BetProfitLossSummary
+                  summary={betSummary}
+                  percent={profitLossPercent}
+                  size="sm"
+                />
               </div>
 
               {/* Progresso */}
               <div className="space-y-2">
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Inicial: R$ {bankroll.initialBalance.toFixed(2)}</span>
+                  <span>Investimento: R$ {totalInvestment.toFixed(2)}</span>
                   <span>{progressPercent.toFixed(0)}%</span>
                 </div>
                 <Progress value={Math.min(progressPercent, 200)} />

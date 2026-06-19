@@ -3,6 +3,107 @@
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { prisma } from "@/lib/prisma";
 
+export type BetProfitSummary = {
+  wonProfit: number;
+  lostProfit: number;
+  otherProfit: number;
+  profitLoss: number;
+  pendingStake: number;
+  pendingCount: number;
+};
+
+type BetForSummary = {
+  bankrollId: string;
+  status: string;
+  profit: { toString(): string } | null;
+  stake: { toString(): string };
+};
+
+function createEmptyBetProfitSummary(): BetProfitSummary {
+  return {
+    wonProfit: 0,
+    lostProfit: 0,
+    otherProfit: 0,
+    profitLoss: 0,
+    pendingStake: 0,
+    pendingCount: 0,
+  };
+}
+
+function aggregateBetProfitSummaries(bets: BetForSummary[]): {
+  global: BetProfitSummary;
+  byBankroll: Record<string, BetProfitSummary>;
+} {
+  const global = createEmptyBetProfitSummary();
+  const byBankroll: Record<string, BetProfitSummary> = {};
+
+  const getOrCreate = (bankrollId: string) => {
+    if (!byBankroll[bankrollId]) {
+      byBankroll[bankrollId] = createEmptyBetProfitSummary();
+    }
+    return byBankroll[bankrollId];
+  };
+
+  const addToSummary = (
+    summary: BetProfitSummary,
+    status: string,
+    profit: number | null,
+    stake: number
+  ) => {
+    if (status === "PENDENTE") {
+      summary.pendingStake += stake;
+      summary.pendingCount += 1;
+      return;
+    }
+
+    if (profit === null) return;
+
+    if (status === "GANHA") {
+      summary.wonProfit += profit;
+    } else if (status === "PERDIDA") {
+      summary.lostProfit += profit;
+    } else {
+      summary.otherProfit += profit;
+    }
+    summary.profitLoss += profit;
+  };
+
+  for (const bet of bets) {
+    const stake = Number(bet.stake);
+    const profit = bet.profit !== null ? Number(bet.profit) : null;
+    addToSummary(global, bet.status, profit, stake);
+    addToSummary(getOrCreate(bet.bankrollId), bet.status, profit, stake);
+  }
+
+  return { global, byBankroll };
+}
+
+export async function getBetProfitSummaries() {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return { error: "Não autenticado" };
+    }
+
+    const bets = await prisma.bet.findMany({
+      where: { userId: user.dbUser.id },
+      select: {
+        bankrollId: true,
+        status: true,
+        profit: true,
+        stake: true,
+      },
+    });
+
+    const { global, byBankroll } = aggregateBetProfitSummaries(bets);
+
+    return { success: true, data: { global, byBankroll } };
+  } catch (error: any) {
+    console.error("Erro ao buscar resumo de lucro:", error);
+    return { error: error.message || "Erro ao buscar resumo de lucro" };
+  }
+}
+
 // Estatísticas gerais do usuário
 export async function getUserStats() {
   try {
@@ -18,7 +119,8 @@ export async function getUserStats() {
       voidBets,
       pendingBets,
       totalBankrolls,
-      allBets,
+      allBetsForSummary,
+      settledBetsWithProfit,
     ] = await Promise.all([
       prisma.bet.count({ where: { userId: user.dbUser.id } }),
       prisma.bet.count({ where: { userId: user.dbUser.id, status: "GANHA" } }),
@@ -33,6 +135,15 @@ export async function getUserStats() {
       }),
       prisma.bankroll.count({ where: { userId: user.dbUser.id } }),
       prisma.bet.findMany({
+        where: { userId: user.dbUser.id },
+        select: {
+          bankrollId: true,
+          status: true,
+          profit: true,
+          stake: true,
+        },
+      }),
+      prisma.bet.findMany({
         where: {
           userId: user.dbUser.id,
           profit: { not: null },
@@ -41,12 +152,11 @@ export async function getUserStats() {
       }),
     ]);
 
-    // Calcular lucro total e ROI
-    const totalProfit = allBets.reduce(
-      (sum, bet) => sum + Number(bet.profit || 0),
-      0
-    );
-    const totalStaked = allBets.reduce(
+    const { global: profitSummary } =
+      aggregateBetProfitSummaries(allBetsForSummary);
+
+    const totalProfit = profitSummary.profitLoss;
+    const totalStaked = settledBetsWithProfit.reduce(
       (sum, bet) => sum + Number(bet.stake),
       0
     );
@@ -85,6 +195,10 @@ export async function getUserStats() {
         roi,
         winRate,
         avgOdds,
+        wonProfit: profitSummary.wonProfit,
+        lostProfit: profitSummary.lostProfit,
+        otherProfit: profitSummary.otherProfit,
+        pendingStake: profitSummary.pendingStake,
       },
     };
   } catch (error: any) {
