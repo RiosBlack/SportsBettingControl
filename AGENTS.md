@@ -38,6 +38,8 @@ Sistema profissional de gestão e controle de apostas esportivas desenvolvido co
 4. `pnpm dev`
 
 ## 📅 Changelogs
+- [2026-06-19 - Campo Seleção no Formulário de Aposta](changelogs/2026-06-19-bet-selection-field.md)
+- [2026-06-19 - Edição de Apostas Pendentes](changelogs/2026-06-19-edit-bet-pending.md)
 - [2026-06-18 - Importação de Apostas por Print (Chat)](changelogs/2026-06-18-bet-import-chat.md)
 - [2026-06-18 - Busca de Eventos com APIs](changelogs/2026-06-18-event-search-apis.md)
 - [2026-06-18 - Rebrand: Betting Control](changelogs/2026-06-18-rebrand-betting-control.md)

@@ -279,44 +279,75 @@ export async function updateBet(data: UpdateBetInput) {
       return { error: "Aposta não encontrada ou já foi finalizada" };
     }
 
-    const updateData: any = {
-        sport: validatedData.sport,
-        event: validatedData.event,
-        competition: validatedData.competition,
-        selection: validatedData.selection,
-        odds: validatedData.odds,
-        stake: validatedData.stake,
-        eventDate: validatedData.eventDate,
-        bookmaker: validatedData.bookmaker,
-        notes: validatedData.notes,
-        tags: validatedData.tags,
-    };
+    const updateData: Record<string, unknown> = {};
 
-    if (validatedData.marketId) {
-      updateData.marketId = validatedData.marketId;
+    if (validatedData.sport !== undefined) updateData.sport = validatedData.sport;
+    if (validatedData.event !== undefined) updateData.event = validatedData.event;
+    if (validatedData.competition !== undefined) updateData.competition = validatedData.competition;
+    if (validatedData.selection !== undefined) updateData.selection = validatedData.selection;
+    if (validatedData.odds !== undefined) updateData.odds = validatedData.odds;
+    if (validatedData.stake !== undefined) updateData.stake = validatedData.stake;
+    if (validatedData.eventDate !== undefined) updateData.eventDate = validatedData.eventDate;
+    if (validatedData.bookmaker !== undefined) updateData.bookmaker = validatedData.bookmaker;
+    if (validatedData.notes !== undefined) updateData.notes = validatedData.notes;
+    if (validatedData.tags !== undefined) updateData.tags = validatedData.tags;
+    if (validatedData.marketId !== undefined) updateData.marketId = validatedData.marketId;
+
+    const oldStake = Number(existingBet.stake);
+    const newStake =
+      validatedData.stake !== undefined ? validatedData.stake : oldStake;
+    const stakeDiff = newStake - oldStake;
+
+    if (stakeDiff !== 0) {
+      const bankroll = await prisma.bankroll.findFirst({
+        where: { id: existingBet.bankrollId },
+      });
+
+      if (!bankroll) {
+        return { error: "Banca não encontrada" };
+      }
+
+      if (stakeDiff > 0 && Number(bankroll.currentBalance) < stakeDiff) {
+        return { error: "Saldo insuficiente na banca" };
+      }
     }
 
-    const bet = await prisma.bet.update({
-      where: { id: validatedData.id },
-      data: updateData,
-      include: {
-        bankroll: {
-          select: {
-            name: true,
-            currency: true,
+    const bet = await prisma.$transaction(async (tx) => {
+      if (stakeDiff !== 0) {
+        await tx.bankroll.update({
+          where: { id: existingBet.bankrollId },
+          data: {
+            currentBalance:
+              stakeDiff > 0
+                ? { decrement: stakeDiff }
+                : { increment: Math.abs(stakeDiff) },
+          },
+        });
+      }
+
+      return tx.bet.update({
+        where: { id: validatedData.id },
+        data: updateData,
+        include: {
+          bankroll: {
+            select: {
+              name: true,
+              currency: true,
+            },
+          },
+          market: {
+            select: {
+              id: true,
+              name: true,
+            },
           },
         },
-        market: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
+      });
     });
 
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/bets");
+    revalidatePath("/dashboard/bankrolls");
 
     // Converter Decimal para number para evitar erro de serialização
     const betData = {

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { settleBet, deleteBet } from '@/lib/actions/bet'
+import { EditBetDialog } from './edit-bet-dialog'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -35,7 +36,7 @@ interface Bet {
   market: {
     id: string
     name: string
-  }
+  } | null
   selection: string
   odds: number
   stake: number
@@ -45,6 +46,7 @@ interface Bet {
   placedAt: Date
   competition: string | null
   bookmaker: string | null
+  notes: string | null
   bankroll: {
     name: string
     currency: string
@@ -64,7 +66,7 @@ export function BetsListView({ bets }: BetsListViewProps) {
     const matchesFilter = filter === 'all' || bet.status === filter
     const matchesSearch =
       bet.event.toLowerCase().includes(search.toLowerCase()) ||
-      bet.market.name.toLowerCase().includes(search.toLowerCase()) ||
+      (bet.market?.name.toLowerCase() || '').includes(search.toLowerCase()) ||
       (bet.bookmaker?.toLowerCase() || '').includes(search.toLowerCase())
     return matchesFilter && matchesSearch
   })
@@ -199,7 +201,7 @@ export function BetsListView({ bets }: BetsListViewProps) {
                     <TableCell>{bet.sport}</TableCell>
                     <TableCell>
                       <div>
-                        <p className="text-sm">{bet.market.name}</p>
+                        <p className="text-sm">{bet.market?.name ?? '-'}</p>
                         <p className="text-xs text-muted-foreground">{bet.selection}</p>
                       </div>
                     </TableCell>
@@ -275,6 +277,9 @@ export function BetsListView({ bets }: BetsListViewProps) {
                               </DialogFooter>
                             </DialogContent>
                           </Dialog>
+                        )}
+                        {bet.status === 'PENDENTE' && (
+                          <EditBetDialog bet={bet} disabled={isPending} />
                         )}
                         <Button
                           size="sm"
