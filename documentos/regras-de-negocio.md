@@ -13,9 +13,11 @@ Este documento descreve as principais lógicas e restrições aplicadas ao siste
 - **Investimento Total (exibição)**: Saldo inicial da banca + soma de transações `DEPOSIT`.
 - **Lucro/Prejuízo (exibição)**: Resultado das apostas finalizadas (`Σ profit`), com composição ganhas/perdidas. Não usa diferença de saldo contábil.
 - **Apostas pendentes (observação)**: Exibe a soma de `stake` das apostas com status `PENDENTE` como valor em jogo.
+- **Resumo na listagem (`/dashboard/bets`)**: Cards com quantidade, valor apostado, saldo (lucro/prejuízo das finalizadas) e pendentes, recalculados conforme período + filtros de status/busca.
 
 ## 2. Gestão de Apostas (Bets)
 - **Vínculo**: Toda aposta deve estar vinculada a uma Banca (Bankroll) e ao Usuário autenticado.
+- **Data do evento (`eventDate`)**: Ao criar ou editar, persiste como meio-dia UTC do dia civil escolhido (`yyyy-MM-ddT12:00:00.000Z`), garantindo consistência entre filtro, listagem e agrupamento.
 - **Evento manual**: Evento e competição são informados pelo usuário (campos texto), sem dependência de APIs externas.
 - **Estatutos (Status)**:
   - `PENDENTE`: Aposta realizada, aguardando resultado.

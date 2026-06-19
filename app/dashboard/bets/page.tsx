@@ -1,20 +1,33 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { getBets } from '@/lib/actions/bet'
+import { resolveDateRangeFromParams } from '@/lib/utils/date-range'
 import { BetsListView } from './_components/bets-list-view'
 
-export default async function BetsPage() {
+interface BetsPageProps {
+  searchParams: Promise<{
+    startDate?: string
+    endDate?: string
+  }>
+}
+
+export default async function BetsPage({ searchParams }: BetsPageProps) {
   const session = await auth()
 
   if (!session?.user) {
     redirect('/login')
   }
 
-  const betsResult = await getBets({ limit: 100 })
+  const params = await searchParams
+  const { startDate, endDate, from, to } = resolveDateRangeFromParams(
+    params.startDate,
+    params.endDate
+  )
+
+  const betsResult = await getBets({ startDate, endDate, limit: 100, offset: 0 })
   const betsData = betsResult.data || []
 
-  // Converter Decimal para number
-  const bets = betsData.map(bet => ({
+  const bets = betsData.map((bet) => ({
     ...bet,
     odds: Number(bet.odds),
     stake: Number(bet.stake),
@@ -23,8 +36,10 @@ export default async function BetsPage() {
 
   return (
     <div className="container mx-auto max-w-7xl p-6">
-      <BetsListView bets={bets} />
+      <BetsListView
+        bets={bets}
+        initialRange={{ from, to }}
+      />
     </div>
   )
 }
-

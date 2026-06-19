@@ -14,6 +14,7 @@ import {
   type FilterBetsInput,
 } from "@/lib/validations/bet";
 import { upsertSportEventFromSelection } from "@/lib/integrations/sport-events";
+import { normalizeEventDate } from "@/lib/utils/event-date";
 
 export async function createBetForUser(userId: string, data: CreateBetInput) {
   const validatedData = CreateBetSchema.parse(data);
@@ -56,7 +57,7 @@ export async function createBetForUser(userId: string, data: CreateBetInput) {
         selection: validatedData.selection,
         odds: validatedData.odds,
         stake: validatedData.stake,
-        eventDate: validatedData.eventDate,
+        eventDate: normalizeEventDate(validatedData.eventDate),
         bookmaker: validatedData.bookmaker,
         notes: validatedData.notes,
         tags: validatedData.tags,
@@ -148,7 +149,11 @@ export async function getBets(filters?: FilterBetsInput) {
       where.status = validatedFilters.status;
     }
 
-    if (validatedFilters.startDate || validatedFilters.endDate) {
+    const hasDateFilter =
+      validatedFilters.startDate !== undefined ||
+      validatedFilters.endDate !== undefined;
+
+    if (hasDateFilter) {
       where.eventDate = {};
       if (validatedFilters.startDate) {
         where.eventDate.gte = validatedFilters.startDate;
@@ -175,9 +180,9 @@ export async function getBets(filters?: FilterBetsInput) {
             },
           },
         },
-        orderBy: {
-          placedAt: "desc",
-        },
+        orderBy: hasDateFilter
+          ? { eventDate: "desc" }
+          : { placedAt: "desc" },
         take: validatedFilters.limit || 50,
         skip: validatedFilters.offset || 0,
       }),
@@ -287,7 +292,9 @@ export async function updateBet(data: UpdateBetInput) {
     if (validatedData.selection !== undefined) updateData.selection = validatedData.selection;
     if (validatedData.odds !== undefined) updateData.odds = validatedData.odds;
     if (validatedData.stake !== undefined) updateData.stake = validatedData.stake;
-    if (validatedData.eventDate !== undefined) updateData.eventDate = validatedData.eventDate;
+    if (validatedData.eventDate !== undefined) {
+      updateData.eventDate = normalizeEventDate(validatedData.eventDate);
+    }
     if (validatedData.bookmaker !== undefined) updateData.bookmaker = validatedData.bookmaker;
     if (validatedData.notes !== undefined) updateData.notes = validatedData.notes;
     if (validatedData.tags !== undefined) updateData.tags = validatedData.tags;

@@ -29,6 +29,7 @@ import { MarketSelect } from '../new/_components/market-select'
 import { EventSearchCombobox } from '@/components/event-search-combobox'
 import type { CreateBetInput } from '@/lib/validations/bet'
 import { BOOKMAKER_OPTIONS } from '@/lib/constants/bookmakers'
+import { calendarDateFromEventDate } from '@/lib/utils/event-date'
 
 interface EditBetDialogBet {
   id: string
@@ -73,7 +74,7 @@ export function EditBetDialog({ bet, disabled }: EditBetDialogProps) {
     setSport(bet.sport as CreateBetInput['sport'])
     setEventValue(bet.event)
     setCompetitionValue(bet.competition ?? '')
-    setEventDate(new Date(bet.eventDate))
+    setEventDate(calendarDateFromEventDate(new Date(bet.eventDate)))
     setMarketId(bet.market?.id ?? '')
     setSelection(bet.selection ?? '')
     setOdds(bet.odds.toString())

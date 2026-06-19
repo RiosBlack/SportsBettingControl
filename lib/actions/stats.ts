@@ -2,81 +2,12 @@
 
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { prisma } from "@/lib/prisma";
+import {
+  aggregateBetProfitSummaries,
+} from "@/lib/utils/bet-summary";
+import type { BetProfitSummary } from "@/types";
 
-export type BetProfitSummary = {
-  wonProfit: number;
-  lostProfit: number;
-  otherProfit: number;
-  profitLoss: number;
-  pendingStake: number;
-  pendingCount: number;
-};
-
-type BetForSummary = {
-  bankrollId: string;
-  status: string;
-  profit: { toString(): string } | null;
-  stake: { toString(): string };
-};
-
-function createEmptyBetProfitSummary(): BetProfitSummary {
-  return {
-    wonProfit: 0,
-    lostProfit: 0,
-    otherProfit: 0,
-    profitLoss: 0,
-    pendingStake: 0,
-    pendingCount: 0,
-  };
-}
-
-function aggregateBetProfitSummaries(bets: BetForSummary[]): {
-  global: BetProfitSummary;
-  byBankroll: Record<string, BetProfitSummary>;
-} {
-  const global = createEmptyBetProfitSummary();
-  const byBankroll: Record<string, BetProfitSummary> = {};
-
-  const getOrCreate = (bankrollId: string) => {
-    if (!byBankroll[bankrollId]) {
-      byBankroll[bankrollId] = createEmptyBetProfitSummary();
-    }
-    return byBankroll[bankrollId];
-  };
-
-  const addToSummary = (
-    summary: BetProfitSummary,
-    status: string,
-    profit: number | null,
-    stake: number
-  ) => {
-    if (status === "PENDENTE") {
-      summary.pendingStake += stake;
-      summary.pendingCount += 1;
-      return;
-    }
-
-    if (profit === null) return;
-
-    if (status === "GANHA") {
-      summary.wonProfit += profit;
-    } else if (status === "PERDIDA") {
-      summary.lostProfit += profit;
-    } else {
-      summary.otherProfit += profit;
-    }
-    summary.profitLoss += profit;
-  };
-
-  for (const bet of bets) {
-    const stake = Number(bet.stake);
-    const profit = bet.profit !== null ? Number(bet.profit) : null;
-    addToSummary(global, bet.status, profit, stake);
-    addToSummary(getOrCreate(bet.bankrollId), bet.status, profit, stake);
-  }
-
-  return { global, byBankroll };
-}
+export type { BetProfitSummary };
 
 export async function getBetProfitSummaries() {
   try {
