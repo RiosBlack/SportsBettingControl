@@ -4,10 +4,48 @@ import { getCurrentUser } from "@/lib/auth/get-user";
 import { prisma } from "@/lib/prisma";
 import {
   aggregateBetProfitSummaries,
+  computeBetPeriodStats,
 } from "@/lib/utils/bet-summary";
+import { getTodayRange } from "@/lib/utils/date-range";
 import type { BetProfitSummary } from "@/types";
 
 export type { BetProfitSummary };
+
+export async function getBetSummaryForDateRange(startDate: Date, endDate: Date) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return { error: "Não autenticado" };
+    }
+
+    const bets = await prisma.bet.findMany({
+      where: {
+        userId: user.dbUser.id,
+        eventDate: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      select: {
+        status: true,
+        profit: true,
+        stake: true,
+      },
+    });
+
+    return { success: true, data: computeBetPeriodStats(bets) };
+  } catch (error: any) {
+    console.error("Erro ao buscar resumo de apostas por período:", error);
+    return {
+      error: error.message || "Erro ao buscar resumo de apostas por período",
+    };
+  }
+}
+
+export async function getTodayBetSummary() {
+  const { startDate, endDate } = getTodayRange();
+  return getBetSummaryForDateRange(startDate, endDate);
+}
 
 export async function getBetProfitSummaries() {
   try {

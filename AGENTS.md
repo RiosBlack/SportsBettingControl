@@ -38,6 +38,7 @@ Sistema profissional de gestão e controle de apostas esportivas desenvolvido co
 4. `pnpm dev`
 
 ## 📅 Changelogs
+- [2026-06-19 - Resumo do dia na Dashboard](changelogs/2026-06-19-dashboard-day-summary.md)
 - [2026-06-19 - Normalização de eventDate na criação de apostas](changelogs/2026-06-19-event-date-normalization.md)
 - [2026-06-19 - Resumo de apostas na listagem](changelogs/2026-06-19-bets-period-summary.md)
 - [2026-06-19 - Filtro de apostas por dia com calendário de intervalo](changelogs/2026-06-19-bets-day-filter.md)

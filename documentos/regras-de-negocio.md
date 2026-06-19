@@ -14,6 +14,7 @@ Este documento descreve as principais lógicas e restrições aplicadas ao siste
 - **Lucro/Prejuízo (exibição)**: Resultado das apostas finalizadas (`Σ profit`), com composição ganhas/perdidas. Não usa diferença de saldo contábil.
 - **Apostas pendentes (observação)**: Exibe a soma de `stake` das apostas com status `PENDENTE` como valor em jogo.
 - **Resumo na listagem (`/dashboard/bets`)**: Cards com quantidade, valor apostado, saldo (lucro/prejuízo das finalizadas) e pendentes, recalculados conforme período + filtros de status/busca.
+- **Resumo do dia na Dashboard (`/dashboard`)**: Cards com valor apostado, saldo do dia e pendentes, sempre filtrados por `eventDate` do dia atual.
 
 ## 2. Gestão de Apostas (Bets)
 - **Vínculo**: Toda aposta deve estar vinculada a uma Banca (Bankroll) e ao Usuário autenticado.

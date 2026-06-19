@@ -4,6 +4,7 @@ import {
   getUserStats,
   getRecentBets,
   getBetProfitSummaries,
+  getTodayBetSummary,
 } from '@/lib/actions/stats'
 import { getBankrolls } from '@/lib/actions/bankroll'
 import { getAllTransactions } from '@/lib/actions/transaction'
@@ -20,17 +21,12 @@ import {
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import PeriodStatsCard from './_components/period-stats-card'
+import { DashboardDaySummary } from './_components/dashboard-day-summary'
 import { BetProfitLossSummary } from './_components/bet-profit-loss-summary'
+import { createEmptyBetProfitSummary } from '@/lib/utils/bet-summary'
 import type { BetProfitSummary } from '@/types'
 
-const emptyBetSummary: BetProfitSummary = {
-  wonProfit: 0,
-  lostProfit: 0,
-  otherProfit: 0,
-  profitLoss: 0,
-  pendingStake: 0,
-  pendingCount: 0,
-}
+const emptyBetSummary = createEmptyBetProfitSummary()
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -39,14 +35,21 @@ export default async function DashboardPage() {
     redirect('/login')
   }
 
-  const [statsResult, bankrollsResult, recentBetsResult, profitSummariesResult, transactionsResult] =
-    await Promise.all([
-      getUserStats(),
-      getBankrolls(),
-      getRecentBets(5),
-      getBetProfitSummaries(),
-      getAllTransactions(),
-    ])
+  const [
+    statsResult,
+    bankrollsResult,
+    recentBetsResult,
+    profitSummariesResult,
+    transactionsResult,
+    todayBetSummaryResult,
+  ] = await Promise.all([
+    getUserStats(),
+    getBankrolls(),
+    getRecentBets(5),
+    getBetProfitSummaries(),
+    getAllTransactions(),
+    getTodayBetSummary(),
+  ])
 
   const stats = statsResult.data
   const bankrolls = bankrollsResult.data || []
@@ -82,8 +85,22 @@ export default async function DashboardPage() {
     0
   )
 
+  const todayBetStats =
+    todayBetSummaryResult.success && todayBetSummaryResult.data
+      ? todayBetSummaryResult.data
+      : {
+          summary: emptyBetSummary,
+          totalStaked: 0,
+          totalBets: 0,
+        }
+
   return (
     <div className="container mx-auto max-w-7xl p-4 md:p-6 lg:p-8">
+      <DashboardDaySummary
+        totalStaked={todayBetStats.totalStaked}
+        summary={todayBetStats.summary}
+      />
+
       {/* Period Stats */}
       <PeriodStatsCard />
 
