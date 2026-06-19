@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle, Plus, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -15,6 +16,7 @@ import { toast } from 'sonner'
 import { DatePicker } from '@/components/date-picker'
 import { MarketSelect } from './market-select'
 import { EventSearchCombobox } from '@/components/event-search-combobox'
+import { BetImportAssistant } from './bet-import-assistant'
 import type { CreateBetInput, SelectedSportEventInput } from '@/lib/validations/bet'
 
 interface Bankroll {
@@ -62,7 +64,7 @@ export function CreateBetForm({ bankrolls }: CreateBetFormProps) {
           tags: [],
         })
 
-        if (result.success) {
+        if ('success' in result && result.success) {
           toast.success('Aposta criada com sucesso!')
           router.push('/dashboard/bets')
         } else if (result.error) {
@@ -90,7 +92,16 @@ export function CreateBetForm({ bankrolls }: CreateBetFormProps) {
         </CardTitle>
         <CardDescription>Registre uma nova aposta esportiva</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-8">
+        <BetImportAssistant bankrolls={bankrolls} />
+
+        <div className="relative">
+          <Separator />
+          <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-3 text-xs text-muted-foreground">
+            ou preencha manualmente
+          </span>
+        </div>
+
         {state?.error && (
           <Alert variant="destructive" className="mb-6">
             <AlertCircle className="h-4 w-4" />

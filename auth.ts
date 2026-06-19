@@ -1,5 +1,5 @@
 import NextAuth from 'next-auth'
-import { prisma } from '@/lib/prisma'
+import { prisma, withDbRetry } from '@/lib/prisma'
 import Credentials from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
@@ -33,10 +33,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const { email, password } = validatedFields.data
 
-        // Buscar usuário no banco
-        const user = await prisma.user.findUnique({
-          where: { email },
-        })
+        const user = await withDbRetry(() =>
+          prisma.user.findUnique({
+            where: { email },
+          })
+        )
 
         if (!user || !user.password) {
           return null

@@ -1,6 +1,6 @@
 import { cache } from 'react'
 import { auth } from '@/auth'
-import { prisma } from '@/lib/prisma'
+import { withDbRetry, prisma } from '@/lib/prisma'
 
 /**
  * Helper para buscar usuário autenticado do NextAuth e seu perfil no banco
@@ -14,10 +14,11 @@ export const getCurrentUser = cache(async () => {
     return null
   }
 
-  // Buscar perfil do usuário no banco
-  const dbUser = await prisma.user.findUnique({
-    where: { id: session.user.id },
-  })
+  const dbUser = await withDbRetry(() =>
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+    })
+  )
 
   if (!dbUser) {
     return null

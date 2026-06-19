@@ -15,6 +15,94 @@ import {
 } from "@/lib/validations/bet";
 import { upsertSportEventFromSelection } from "@/lib/integrations/sport-events";
 
+export async function createBetForUser(userId: string, data: CreateBetInput) {
+  const validatedData = CreateBetSchema.parse(data);
+
+  const bankroll = await prisma.bankroll.findFirst({
+    where: {
+      id: validatedData.bankrollId,
+      userId,
+    },
+  });
+
+  if (!bankroll) {
+    return { error: "Banca não encontrada" };
+  }
+
+  if (Number(bankroll.currentBalance) < validatedData.stake) {
+    return { error: "Saldo insuficiente na banca" };
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    let sportEventId: string | undefined = validatedData.sportEventId;
+
+    if (!sportEventId && validatedData.selectedEvent) {
+      const sportEvent = await upsertSportEventFromSelection(
+        validatedData.selectedEvent,
+        tx
+      );
+      sportEventId = sportEvent.id;
+    }
+
+    const bet = await tx.bet.create({
+      data: {
+        userId,
+        bankrollId: validatedData.bankrollId,
+        sportEventId,
+        sport: validatedData.sport,
+        event: validatedData.event,
+        competition: validatedData.competition,
+        marketId: validatedData.marketId,
+        selection: validatedData.selection,
+        odds: validatedData.odds,
+        stake: validatedData.stake,
+        eventDate: validatedData.eventDate,
+        bookmaker: validatedData.bookmaker,
+        notes: validatedData.notes,
+        tags: validatedData.tags,
+      },
+      include: {
+        bankroll: {
+          select: {
+            name: true,
+            currency: true,
+          },
+        },
+        market: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    await tx.bankroll.update({
+      where: { id: validatedData.bankrollId },
+      data: {
+        currentBalance: {
+          decrement: validatedData.stake,
+        },
+      },
+    });
+
+    return bet;
+  });
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/bets");
+  revalidatePath("/dashboard/bankrolls");
+
+  const betData = {
+    ...result,
+    odds: Number(result.odds),
+    stake: Number(result.stake),
+    profit: result.profit ? Number(result.profit) : null,
+  };
+
+  return { success: true as const, data: betData };
+}
+
 // Criar nova aposta
 export async function createBet(data: CreateBetInput) {
   try {
@@ -23,97 +111,11 @@ export async function createBet(data: CreateBetInput) {
       return { error: "Não autenticado" };
     }
 
-    const validatedData = CreateBetSchema.parse(data);
-
-    // Verificar se a banca pertence ao usuário
-    const bankroll = await prisma.bankroll.findFirst({
-      where: {
-        id: validatedData.bankrollId,
-        userId: user.dbUser.id,
-      },
-    });
-
-    if (!bankroll) {
-      return { error: "Banca não encontrada" };
+    const result = await createBetForUser(user.dbUser.id, data);
+    if ("error" in result) {
+      return { error: result.error };
     }
-
-    // Verificar se há saldo suficiente
-    if (Number(bankroll.currentBalance) < validatedData.stake) {
-      return { error: "Saldo insuficiente na banca" };
-    }
-
-    // Criar a aposta e atualizar o saldo em uma transação
-    const result = await prisma.$transaction(async (tx) => {
-      let sportEventId: string | undefined = validatedData.sportEventId
-
-      if (!sportEventId && validatedData.selectedEvent) {
-        const sportEvent = await upsertSportEventFromSelection(
-          validatedData.selectedEvent,
-          tx
-        )
-        sportEventId = sportEvent.id
-      }
-
-      // Criar aposta
-      const bet = await tx.bet.create({
-        data: {
-          userId: user.dbUser.id,
-          bankrollId: validatedData.bankrollId,
-          sportEventId,
-          sport: validatedData.sport,
-          event: validatedData.event,
-          competition: validatedData.competition,
-          marketId: validatedData.marketId,
-          selection: validatedData.selection,
-          odds: validatedData.odds,
-          stake: validatedData.stake,
-          eventDate: validatedData.eventDate,
-          bookmaker: validatedData.bookmaker,
-          notes: validatedData.notes,
-          tags: validatedData.tags,
-        },
-        include: {
-          bankroll: {
-            select: {
-              name: true,
-              currency: true,
-            },
-          },
-          market: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-      });
-
-      // Atualizar saldo da banca
-      await tx.bankroll.update({
-        where: { id: validatedData.bankrollId },
-        data: {
-          currentBalance: {
-            decrement: validatedData.stake,
-          },
-        },
-      });
-
-      return bet;
-    });
-
-    revalidatePath("/dashboard");
-    revalidatePath("/dashboard/bets");
-    revalidatePath("/dashboard/bankrolls");
-
-    // Converter Decimal para number para evitar erro de serialização
-    const betData = {
-      ...result,
-      odds: Number(result.odds),
-      stake: Number(result.stake),
-      profit: result.profit ? Number(result.profit) : null,
-    };
-
-    return { success: true, data: betData };
+    return result;
   } catch (error: any) {
     console.error("Erro ao criar aposta:", error);
     return { error: error.message || "Erro ao criar aposta" };

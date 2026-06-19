@@ -17,6 +17,8 @@
     "db:reset": "prisma migrate reset"
   },
   "dependencies": {
+    "@ai-sdk/google": "^3.0.83",
+    "@ai-sdk/openai": "^3.0.73",
     "@auth/prisma-adapter": "^2.10.0",
     "@hookform/resolvers": "^3.9.1",
     "@prisma/client": "^6.16.3",
@@ -47,6 +49,7 @@
     "@radix-ui/react-toggle": "1.1.1",
     "@radix-ui/react-toggle-group": "1.1.1",
     "@radix-ui/react-tooltip": "1.1.6",
+    "ai": "^6.0.208",
     "autoprefixer": "^10.4.20",
     "bcryptjs": "^3.0.2",
     "class-variance-authority": "^0.7.1",

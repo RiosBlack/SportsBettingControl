@@ -29,6 +29,15 @@ Acionada automaticamente quando a API-Football esgota tokens ou retorna erro de 
 ### Regra de persistência
 Requisições externas ocorrem **somente durante a busca** no formulário. Ao salvar a aposta, o confronto (times, logos, competição e esporte) é gravado em `SportEvent` e reutilizado em buscas futuras sem nova chamada externa.
 
+## 5. IA — Importação por print (OpenAI / Gemini)
+
+Usada no assistente de chat da página Nova Aposta para interpretar screenshots de bilhetes.
+
+- SDK: Vercel AI SDK (`ai`, `@ai-sdk/openai`, `@ai-sdk/google`)
+- Modelos: `gpt-4o` (OpenAI), `gemini-2.0-flash` (Google)
+- Fluxo: upload de imagem → `analyzeBetScreenshot` → confirmação em chat → `confirmBetFromDraft`
+- Variáveis: `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `BET_IMPORT_DEFAULT_PROVIDER`
+
 ---
 
 ## Variáveis de Ambiente Necessárias
@@ -37,3 +46,6 @@ Requisições externas ocorrem **somente durante a busca** no formulário. Ao sa
 - `AUTH_URL`: URL base da aplicação (ex: `http://localhost:3000`).
 - `API_FOOTBALL_KEY`: Chave da API-Football (busca de eventos).
 - `FOOTBALL_DATA_API_TOKEN`: Token do football-data.org (fallback).
+- `OPENAI_API_KEY`: Chave OpenAI (importação por print).
+- `GOOGLE_GENERATIVE_AI_API_KEY`: Chave Google Gemini (importação por print).
+- `BET_IMPORT_DEFAULT_PROVIDER`: `openai` ou `gemini` (padrão: `openai`).
