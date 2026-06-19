@@ -55,7 +55,7 @@ export function toBetDraft(raw: AiBetDraft): BetDraft {
 }
 
 export const BetDraftWithMarketSchema = BetDraftSchema.extend({
-  marketId: z.string(),
+  marketId: z.string().optional(),
   bankrollId: z.string(),
   bankrollName: z.string().optional(),
 })

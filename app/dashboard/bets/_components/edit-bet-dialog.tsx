@@ -28,6 +28,7 @@ import { DatePicker } from '@/components/date-picker'
 import { MarketSelect } from '../new/_components/market-select'
 import { EventSearchCombobox } from '@/components/event-search-combobox'
 import type { CreateBetInput } from '@/lib/validations/bet'
+import { BOOKMAKER_OPTIONS } from '@/lib/constants/bookmakers'
 
 interface EditBetDialogBet {
   id: string
@@ -166,11 +167,11 @@ export function EditBetDialog({ bet, disabled }: EditBetDialogProps) {
                   <SelectValue placeholder="Ex: Bet365" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Bet365">Bet365</SelectItem>
-                  <SelectItem value="Superbet">Superbet</SelectItem>
-                  <SelectItem value="Betano">Betano</SelectItem>
-                  <SelectItem value="BetMGM">BetMGM</SelectItem>
-                  <SelectItem value="Outros">Outros</SelectItem>
+                  {BOOKMAKER_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

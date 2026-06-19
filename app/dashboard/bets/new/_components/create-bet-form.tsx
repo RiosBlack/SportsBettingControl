@@ -17,6 +17,7 @@ import { DatePicker } from '@/components/date-picker'
 import { MarketSelect } from './market-select'
 import { EventSearchCombobox } from '@/components/event-search-combobox'
 import { BetImportAssistant } from './bet-import-assistant'
+import { BOOKMAKER_OPTIONS } from '@/lib/constants/bookmakers'
 import type { CreateBetInput, SelectedSportEventInput } from '@/lib/validations/bet'
 
 interface Bankroll {
@@ -165,19 +166,15 @@ export function CreateBetForm({ bankrolls }: CreateBetFormProps) {
                   <SelectValue placeholder="Ex: Bet365" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Bet365">
-                    <span style={{ color: '#005340' }}>Bet365</span>
-                  </SelectItem>
-                  <SelectItem value="Superbet">
-                    <span style={{ color: '#E80105' }}>Superbet</span>
-                  </SelectItem>
-                  <SelectItem value="Betano">
-                    <span style={{ color: '#FF3D00' }}>Betano</span>
-                  </SelectItem>
-                  <SelectItem value="BetMGM">
-                    <span style={{ color: '#B19661' }}>BetMGM</span>
-                  </SelectItem>
-                  <SelectItem value="Outros">Outros</SelectItem>
+                  {BOOKMAKER_OPTIONS.map((bookmaker) => (
+                    <SelectItem key={bookmaker.value} value={bookmaker.value}>
+                      {'color' in bookmaker && bookmaker.color ? (
+                        <span style={{ color: bookmaker.color }}>{bookmaker.label}</span>
+                      ) : (
+                        bookmaker.label
+                      )}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

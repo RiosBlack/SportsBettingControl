@@ -8,7 +8,14 @@ import {
   confirmBetFromDraftAction,
   refineBetDraftAction,
 } from '@/lib/actions/bet-import'
-import type { AiProvider, SerializedBetDraft } from '@/lib/ai/bet-draft-schema'
+import { applyImportChoices } from '@/lib/ai/apply-import-choices'
+import { formatBetSummary } from '@/lib/ai/format-bet-summary'
+import type {
+  AiProvider,
+  BetDraftWithMarket,
+  SerializedBetDraft,
+} from '@/lib/ai/bet-draft-schema'
+import { BOOKMAKER_OPTIONS } from '@/lib/constants/bookmakers'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -55,6 +62,11 @@ interface Bankroll {
   isActive: boolean
 }
 
+interface Market {
+  id: string
+  name: string
+}
+
 interface BetImportAssistantProps {
   bankrolls: Bankroll[]
 }
@@ -62,6 +74,9 @@ interface BetImportAssistantProps {
 type AssistantStatus =
   | 'idle'
   | 'analyzing'
+  | 'asking_market'
+  | 'selecting_market'
+  | 'selecting_bookmaker'
   | 'confirming'
   | 'refining'
   | 'creating'
@@ -77,6 +92,23 @@ function isCancelMessage(text: string): boolean {
   return ['cancelar', 'cancela', 'cancel', 'parar', 'sair'].includes(normalized)
 }
 
+function isYesMessage(text: string): boolean {
+  const normalized = text.trim().toLowerCase()
+  return ['sim', 's', 'yes'].includes(normalized)
+}
+
+function isNoMessage(text: string): boolean {
+  const normalized = text.trim().toLowerCase()
+  return ['não', 'nao', 'n', 'no'].includes(normalized)
+}
+
+function toDraftWithMarket(draft: SerializedBetDraft): BetDraftWithMarket {
+  return {
+    ...draft,
+    eventDate: new Date(draft.eventDate),
+  }
+}
+
 export function BetImportAssistant({ bankrolls }: BetImportAssistantProps) {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -87,7 +119,11 @@ export function BetImportAssistant({ bankrolls }: BetImportAssistantProps) {
   const [status, setStatus] = useState<AssistantStatus>('idle')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
+  const [pendingDraft, setPendingDraft] = useState<SerializedBetDraft | null>(null)
   const [draft, setDraft] = useState<SerializedBetDraft | null>(null)
+  const [markets, setMarkets] = useState<Market[]>([])
+  const [selectedMarketId, setSelectedMarketId] = useState('')
+  const [selectedBookmaker, setSelectedBookmaker] = useState('')
   const [provider, setProvider] = useState<AiProvider>('openai')
   const [bankrollId, setBankrollId] = useState(defaultBankroll?.id ?? '')
   const [isDragging, setIsDragging] = useState(false)
@@ -118,7 +154,11 @@ export function BetImportAssistant({ bankrolls }: BetImportAssistantProps) {
   const resetSession = useCallback(() => {
     setStatus('idle')
     setMessages([])
+    setPendingDraft(null)
     setDraft(null)
+    setMarkets([])
+    setSelectedMarketId('')
+    setSelectedBookmaker('')
     setInput('')
   }, [])
 
@@ -128,6 +168,157 @@ export function BetImportAssistant({ bankrolls }: BetImportAssistantProps) {
       resetSession()
     }
   }
+
+  const fetchMarkets = async (): Promise<Market[]> => {
+    try {
+      const response = await fetch('/api/markets')
+      if (!response.ok) return []
+      const data = await response.json()
+      return data.success && data.data ? data.data : []
+    } catch {
+      return []
+    }
+  }
+
+  const proceedToBookmakerSelection = useCallback(
+    (aiMarketName?: string) => {
+      if (aiMarketName) {
+        addMessage({
+          role: 'assistant',
+          content: `Ok, usarei a sugestão da IA para o mercado: ${aiMarketName}`,
+        })
+      }
+
+      addMessage({
+        role: 'assistant',
+        content: 'Qual casa de apostas?',
+      })
+      setStatus('selecting_bookmaker')
+    },
+    [addMessage]
+  )
+
+  const showSummary = useCallback(
+    (
+      baseDraft: SerializedBetDraft,
+      marketChoice:
+        | { type: 'existing'; marketId: string; marketName: string }
+        | { type: 'ai' },
+      bookmaker: string
+    ) => {
+      const finalDraft = applyImportChoices(baseDraft, {
+        market: marketChoice,
+        bookmaker,
+      })
+      const summary = formatBetSummary(toDraftWithMarket(finalDraft))
+
+      setDraft(finalDraft)
+      addMessage({ role: 'assistant', content: summary })
+      setStatus('confirming')
+    },
+    [addMessage]
+  )
+
+  const handleUseExistingMarket = useCallback(() => {
+    addMessage({ role: 'user', content: 'Sim' })
+
+    if (markets.length === 0) {
+      addMessage({
+        role: 'assistant',
+        content:
+          'Não há mercados cadastrados. Vou usar a sugestão da IA para o mercado.',
+      })
+      proceedToBookmakerSelection(pendingDraft?.marketName)
+      return
+    }
+
+    addMessage({
+      role: 'assistant',
+      content: 'Selecione o mercado cadastrado:',
+    })
+    setStatus('selecting_market')
+  }, [addMessage, markets.length, pendingDraft?.marketName, proceedToBookmakerSelection])
+
+  const handleUseAiMarket = useCallback(() => {
+    addMessage({ role: 'user', content: 'Não' })
+    proceedToBookmakerSelection(pendingDraft?.marketName)
+  }, [addMessage, pendingDraft?.marketName, proceedToBookmakerSelection])
+
+  const handleMarketContinue = () => {
+    if (!selectedMarketId) {
+      toast.error('Selecione um mercado')
+      return
+    }
+
+    const market = markets.find((item) => item.id === selectedMarketId)
+    if (!market || !pendingDraft) {
+      toast.error('Mercado inválido')
+      return
+    }
+
+    addMessage({
+      role: 'user',
+      content: market.name,
+    })
+
+    setDraft(
+      applyImportChoices(pendingDraft, {
+        market: {
+          type: 'existing',
+          marketId: market.id,
+          marketName: market.name,
+        },
+        bookmaker: pendingDraft.bookmaker ?? '',
+      })
+    )
+
+    proceedToBookmakerSelection()
+  }
+
+  const handleBookmakerContinue = () => {
+    if (!selectedBookmaker) {
+      toast.error('Selecione a casa de apostas')
+      return
+    }
+
+    if (!pendingDraft) {
+      toast.error('Rascunho não encontrado')
+      return
+    }
+
+    addMessage({
+      role: 'user',
+      content: selectedBookmaker,
+    })
+
+    const marketChoice = draft?.marketId
+      ? {
+          type: 'existing' as const,
+          marketId: draft.marketId,
+          marketName: draft.marketName,
+        }
+      : { type: 'ai' as const }
+
+    showSummary(pendingDraft, marketChoice, selectedBookmaker)
+  }
+
+  const startMarketQuestion = useCallback(
+    (partialDraft: SerializedBetDraft, availableMarkets: Market[]) => {
+      setPendingDraft(partialDraft)
+      setMarkets(availableMarkets)
+      setSelectedMarketId('')
+      setSelectedBookmaker('')
+      setDraft(null)
+
+      addMessage({
+        role: 'assistant',
+        content:
+          'Analisei o print. Deseja usar um mercado já cadastrado?\n\nResponda "sim" ou "não", ou use os botões abaixo.',
+      })
+      setStatus('asking_market')
+    },
+    [addMessage]
+  )
 
   const processImage = async (file: File) => {
     if (!bankrollId) {
@@ -155,11 +346,14 @@ export function BetImportAssistant({ bankrolls }: BetImportAssistantProps) {
       const dataUrl = reader.result as string
       addMessage({ role: 'user', content: 'Print da aposta enviado', imageUrl: dataUrl })
 
-      const result = await analyzeBetScreenshotAction({
-        imageBase64: dataUrl,
-        provider,
-        bankrollId,
-      })
+      const [result, availableMarkets] = await Promise.all([
+        analyzeBetScreenshotAction({
+          imageBase64: dataUrl,
+          provider,
+          bankrollId,
+        }),
+        fetchMarkets(),
+      ])
 
       if (!result.success) {
         addMessage({
@@ -170,9 +364,7 @@ export function BetImportAssistant({ bankrolls }: BetImportAssistantProps) {
         return
       }
 
-      setDraft(result.data.draft)
-      addMessage({ role: 'assistant', content: result.data.summary })
-      setStatus('confirming')
+      startMarketQuestion(result.data.draft, availableMarkets)
     }
     reader.onerror = () => {
       toast.error('Erro ao ler a imagem')
@@ -228,18 +420,50 @@ export function BetImportAssistant({ bankrolls }: BetImportAssistantProps) {
       content: 'Importação cancelada. Você pode enviar um novo print quando quiser.',
     })
     setStatus('cancelled')
+    setPendingDraft(null)
     setDraft(null)
   }
 
   const handleSendMessage = async () => {
     const text = input.trim()
-    if (!text || status === 'analyzing' || status === 'refining' || status === 'creating') {
+    if (
+      !text ||
+      status === 'analyzing' ||
+      status === 'refining' ||
+      status === 'creating'
+    ) {
       return
     }
 
     if (isCancelMessage(text)) {
       setInput('')
       handleCancel()
+      return
+    }
+
+    if (status === 'asking_market') {
+      setInput('')
+      if (isYesMessage(text)) {
+        handleUseExistingMarket()
+        return
+      }
+      if (isNoMessage(text)) {
+        handleUseAiMarket()
+        return
+      }
+      addMessage({
+        role: 'assistant',
+        content: 'Responda "sim" para usar um mercado cadastrado ou "não" para a sugestão da IA.',
+      })
+      return
+    }
+
+    if (status === 'selecting_market' || status === 'selecting_bookmaker') {
+      setInput('')
+      addMessage({
+        role: 'assistant',
+        content: 'Use os seletores acima para continuar, ou digite "cancelar".',
+      })
       return
     }
 
@@ -284,6 +508,11 @@ export function BetImportAssistant({ bankrolls }: BetImportAssistantProps) {
 
   const isBusy =
     status === 'analyzing' || status === 'refining' || status === 'creating'
+
+  const isWizardStep =
+    status === 'asking_market' ||
+    status === 'selecting_market' ||
+    status === 'selecting_bookmaker'
 
   return (
     <>
@@ -383,7 +612,7 @@ export function BetImportAssistant({ bankrolls }: BetImportAssistantProps) {
               Assistente de importação
             </SheetTitle>
             <SheetDescription>
-              Confirme os dados ou descreva correções. Digite &quot;cancelar&quot; para encerrar.
+              Escolha mercado e casa de apostas, confirme os dados ou digite &quot;cancelar&quot;.
             </SheetDescription>
           </SheetHeader>
 
@@ -432,6 +661,100 @@ export function BetImportAssistant({ bankrolls }: BetImportAssistantProps) {
                   </div>
                 </div>
               ))}
+
+              {status === 'asking_market' && (
+                <div className="flex gap-2 pl-9">
+                  <div className="w-full max-w-[85%] space-y-3 rounded-lg bg-muted px-3 py-3">
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="flex-1"
+                        onClick={handleUseExistingMarket}
+                      >
+                        Sim
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={handleUseAiMarket}
+                      >
+                        Não
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {status === 'selecting_market' && (
+                <div className="flex gap-2 pl-9">
+                  <div className="w-full max-w-[85%] space-y-3 rounded-lg bg-muted px-3 py-3">
+                    <div className="space-y-2">
+                      <Label>Mercado</Label>
+                      <Select
+                        value={selectedMarketId}
+                        onValueChange={setSelectedMarketId}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um mercado" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {markets.map((market) => (
+                            <SelectItem key={market.id} value={market.id}>
+                              {market.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="w-full"
+                      onClick={handleMarketContinue}
+                      disabled={!selectedMarketId}
+                    >
+                      Continuar
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {status === 'selecting_bookmaker' && (
+                <div className="flex gap-2 pl-9">
+                  <div className="w-full max-w-[85%] space-y-3 rounded-lg bg-muted px-3 py-3">
+                    <div className="space-y-2">
+                      <Label>Casa de apostas</Label>
+                      <Select
+                        value={selectedBookmaker}
+                        onValueChange={setSelectedBookmaker}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a casa" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {BOOKMAKER_OPTIONS.map((bookmaker) => (
+                            <SelectItem key={bookmaker.value} value={bookmaker.value}>
+                              {bookmaker.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="w-full"
+                      onClick={handleBookmakerContinue}
+                      disabled={!selectedBookmaker}
+                    >
+                      Ver resumo
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               {isBusy && messages.length > 0 && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -483,7 +806,11 @@ export function BetImportAssistant({ bankrolls }: BetImportAssistantProps) {
                 placeholder={
                   status === 'cancelled'
                     ? 'Sessão encerrada'
-                    : 'Digite sim, correção ou cancelar...'
+                    : status === 'asking_market'
+                      ? 'Digite sim ou não...'
+                      : isWizardStep
+                        ? 'Use os seletores acima...'
+                        : 'Digite sim, correção ou cancelar...'
                 }
                 disabled={isBusy || status === 'cancelled'}
               />

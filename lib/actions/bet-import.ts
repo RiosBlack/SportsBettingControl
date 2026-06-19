@@ -84,7 +84,7 @@ async function resolveMarketId(marketName: string): Promise<string> {
   throw new Error(created.error || 'Erro ao resolver mercado')
 }
 
-async function enrichDraft(
+async function enrichDraftWithoutMarket(
   draft: BetDraft,
   bankrollId: string,
   userId: string
@@ -97,14 +97,27 @@ async function enrichDraft(
     throw new Error('Banca não encontrada')
   }
 
-  const marketId = await resolveMarketId(draft.marketName)
-
   return {
     ...draft,
     eventDate: new Date(draft.eventDate),
-    marketId,
     bankrollId,
     bankrollName: bankroll.name,
+  }
+}
+
+async function enrichDraft(
+  draft: BetDraft,
+  bankrollId: string,
+  userId: string,
+  existingMarketId?: string
+): Promise<BetDraftWithMarket> {
+  const base = await enrichDraftWithoutMarket(draft, bankrollId, userId)
+  const marketId =
+    existingMarketId || (await resolveMarketId(draft.marketName))
+
+  return {
+    ...base,
+    marketId,
   }
 }
 
@@ -141,14 +154,16 @@ export async function analyzeBetScreenshotAction(input: {
     }
 
     const draft = await analyzeBetScreenshot(data, mimeType, provider)
-    const enriched = await enrichDraft(draft, input.bankrollId, user.dbUser.id)
-    const summary = formatBetSummary(enriched)
+    const enriched = await enrichDraftWithoutMarket(
+      draft,
+      input.bankrollId,
+      user.dbUser.id
+    )
 
     return {
       success: true as const,
       data: {
         draft: serializeDraft(enriched),
-        summary,
       },
     }
   } catch (error: unknown) {
@@ -172,6 +187,9 @@ export async function refineBetDraftAction(input: {
 
     const provider = AiProviderEnum.parse(input.provider)
     const current = deserializeDraft(input.draft)
+    const preservedMarketId = current.marketId
+    const preservedMarketName = current.marketName
+
     const baseDraft = BetDraftSchema.parse({
       event: current.event,
       competition: current.competition,
@@ -187,11 +205,18 @@ export async function refineBetDraftAction(input: {
     })
 
     const refined = await refineBetDraft(baseDraft, input.message, provider)
+
     const enriched = await enrichDraft(
-      refined,
+      {
+        ...refined,
+        marketName: preservedMarketId ? preservedMarketName : refined.marketName,
+        bookmaker: current.bookmaker ?? refined.bookmaker,
+      },
       current.bankrollId,
-      user.dbUser.id
+      user.dbUser.id,
+      preservedMarketId
     )
+
     const summary = formatBetSummary(enriched)
 
     return {
@@ -228,7 +253,8 @@ export async function confirmBetFromDraftAction(input: {
       return { error: 'Banca não encontrada' }
     }
 
-    const marketId = await resolveMarketId(current.marketName)
+    const marketId =
+      current.marketId || (await resolveMarketId(current.marketName))
 
     const result = await createBetForUser(user.dbUser.id, {
       bankrollId: current.bankrollId,
