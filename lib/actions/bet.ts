@@ -412,11 +412,12 @@ export async function settleBet(data: SettleBetInput) {
         profit = 0;
         balanceChange = Number(existingBet.stake); // Retorna o stake
         break;
-      case "CASHOUT":
-        // Para cashout, o lucro deve ser calculado externamente
-        profit = 0; // Será atualizado manualmente
-        balanceChange = 0; // Será atualizado manualmente
+      case "CASHOUT": {
+        const cashoutAmount = validatedData.cashoutAmount!;
+        profit = cashoutAmount - Number(existingBet.stake);
+        balanceChange = cashoutAmount;
         break;
+      }
     }
 
     // Atualizar aposta e saldo da banca em uma transação

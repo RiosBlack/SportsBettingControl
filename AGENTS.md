@@ -38,6 +38,7 @@ Sistema profissional de gestão e controle de apostas esportivas desenvolvido co
 4. `pnpm dev`
 
 ## 📅 Changelogs
+- [2026-06-19 - Cashout no Diálogo Finalizar Aposta](changelogs/2026-06-19-bet-cashout-settle.md)
 - [2026-06-19 - Wizard interativo na importação por print](changelogs/2026-06-19-bet-import-wizard.md)
 - [2026-06-19 - Campo Seleção no Formulário de Aposta](changelogs/2026-06-19-bet-selection-field.md)
 - [2026-06-19 - Edição de Apostas Pendentes](changelogs/2026-06-19-edit-bet-pending.md)

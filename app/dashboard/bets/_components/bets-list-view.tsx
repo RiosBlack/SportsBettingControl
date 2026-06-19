@@ -1,33 +1,17 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { settleBet, deleteBet } from '@/lib/actions/bet'
+import { deleteBet } from '@/lib/actions/bet'
 import { EditBetDialog } from './edit-bet-dialog'
+import { SettleBetDialog } from './settle-bet-dialog'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import { 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
-  Trophy, 
-  Trash2,
-  AlertCircle,
-} from 'lucide-react'
+import { CheckCircle, XCircle, Clock, Trophy, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 
 interface Bet {
   id: string
@@ -70,22 +54,6 @@ export function BetsListView({ bets }: BetsListViewProps) {
       (bet.bookmaker?.toLowerCase() || '').includes(search.toLowerCase())
     return matchesFilter && matchesSearch
   })
-
-  const handleSettle = (betId: string, status: 'GANHA' | 'PERDIDA' | 'ANULADA') => {
-    startTransition(async () => {
-      const result = await settleBet({
-        id: betId,
-        status,
-        result: status === 'GANHA' ? 'WIN' : status === 'PERDIDA' ? 'LOSS' : 'VOID',
-      })
-
-      if (result.success) {
-        toast.success(`Aposta finalizada como ${status}!`)
-      } else {
-        toast.error(result.error)
-      }
-    })
-  }
 
   const handleDelete = (betId: string) => {
     if (!confirm('Tem certeza que deseja deletar esta aposta?')) return
@@ -155,6 +123,7 @@ export function BetsListView({ bets }: BetsListViewProps) {
               <SelectItem value="GANHA">Ganhas</SelectItem>
               <SelectItem value="PERDIDA">Perdidas</SelectItem>
               <SelectItem value="ANULADA">Anuladas</SelectItem>
+              <SelectItem value="CASHOUT">Cashout</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -222,61 +191,15 @@ export function BetsListView({ bets }: BetsListViewProps) {
                     <TableCell>
                       <div className="flex gap-1">
                         {bet.status === 'PENDENTE' && (
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button size="sm" variant="outline">
-                                Finalizar
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Finalizar Aposta</DialogTitle>
-                                <DialogDescription>
-                                  {bet.event}
-                                </DialogDescription>
-                              </DialogHeader>
-                              <div className="space-y-4">
-                                <Alert>
-                                  <AlertCircle className="h-4 w-4" />
-                                  <AlertDescription>
-                                    <div className="grid grid-cols-2 gap-2 text-sm mt-2">
-                                      <div>
-                                        <strong>Valor:</strong> R$ {bet.stake.toFixed(2)}
-                                      </div>
-                                      <div>
-                                        <strong>Odd:</strong> {bet.odds.toFixed(2)}
-                                      </div>
-                                      <div className="col-span-2">
-                                        <strong>Retorno potencial:</strong> R$ {(bet.stake * bet.odds).toFixed(2)}
-                                      </div>
-                                    </div>
-                                  </AlertDescription>
-                                </Alert>
-                              </div>
-                              <DialogFooter className="gap-2">
-                                <Button
-                                  variant="outline"
-                                  onClick={() => handleSettle(bet.id, 'ANULADA')}
-                                  disabled={isPending}
-                                >
-                                  Anular
-                                </Button>
-                                <Button
-                                  variant="destructive"
-                                  onClick={() => handleSettle(bet.id, 'PERDIDA')}
-                                  disabled={isPending}
-                                >
-                                  Perdeu
-                                </Button>
-                                <Button
-                                  onClick={() => handleSettle(bet.id, 'GANHA')}
-                                  disabled={isPending}
-                                >
-                                  Ganhou
-                                </Button>
-                              </DialogFooter>
-                            </DialogContent>
-                          </Dialog>
+                          <SettleBetDialog
+                            bet={{
+                              id: bet.id,
+                              event: bet.event,
+                              stake: bet.stake,
+                              odds: bet.odds,
+                            }}
+                            disabled={isPending}
+                          />
                         )}
                         {bet.status === 'PENDENTE' && (
                           <EditBetDialog bet={bet} disabled={isPending} />

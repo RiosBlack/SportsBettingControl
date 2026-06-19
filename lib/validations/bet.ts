@@ -82,11 +82,26 @@ export const UpdateBetSchema = z.object({
   tags: z.array(z.string()).optional(),
 })
 
-export const SettleBetSchema = z.object({
-  id: z.string(),
-  status: BetStatusEnum,
-  result: BetResultEnum.optional(),
-})
+export const SettleBetSchema = z
+  .object({
+    id: z.string(),
+    status: BetStatusEnum,
+    result: BetResultEnum.optional(),
+    cashoutAmount: z.coerce
+      .number()
+      .positive('Valor do cashout deve ser maior que zero')
+      .max(1000000, 'Valor muito alto')
+      .optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.status === 'CASHOUT' && data.cashoutAmount === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Valor do cashout é obrigatório',
+        path: ['cashoutAmount'],
+      })
+    }
+  })
 
 export const FilterBetsSchema = z.object({
   bankrollId: z.string().optional(),
