@@ -22,6 +22,10 @@ interface SettleBetDialogProps {
   bet: {
     id: string
     event: string
+    market: {
+      name: string
+    } | null
+    selection: string
     stake: number
     odds: number
   }
@@ -112,7 +116,18 @@ export function SettleBetDialog({ bet, disabled }: SettleBetDialogProps) {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Finalizar Aposta</DialogTitle>
-          <DialogDescription>{bet.event}</DialogDescription>
+          <DialogDescription asChild>
+            <div className="space-y-1">
+              <p>{bet.event}</p>
+              {(bet.market?.name || bet.selection) && (
+                <p className="text-sm">
+                  {bet.market?.name && <span>{bet.market.name}</span>}
+                  {bet.market?.name && bet.selection && ' · '}
+                  {bet.selection && <span>{bet.selection}</span>}
+                </p>
+              )}
+            </div>
+          </DialogDescription>
         </DialogHeader>
 
         <Alert>

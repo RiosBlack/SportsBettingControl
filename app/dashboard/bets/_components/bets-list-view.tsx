@@ -96,6 +96,7 @@ function BetTable({
             <TableHead>Evento</TableHead>
             <TableHead>Esporte</TableHead>
             <TableHead>Mercado</TableHead>
+            <TableHead>Casa de Aposta</TableHead>
             <TableHead>Odd</TableHead>
             <TableHead>Valor</TableHead>
             <TableHead>Lucro/Prejuízo</TableHead>
@@ -127,6 +128,7 @@ function BetTable({
                   <p className="text-xs text-muted-foreground">{bet.selection}</p>
                 </div>
               </TableCell>
+              <TableCell className="text-sm">{bet.bookmaker ?? '-'}</TableCell>
               <TableCell className="font-semibold">{bet.odds.toFixed(2)}</TableCell>
               <TableCell className="font-semibold">R$ {bet.stake.toFixed(2)}</TableCell>
               <TableCell>
@@ -148,6 +150,8 @@ function BetTable({
                       bet={{
                         id: bet.id,
                         event: bet.event,
+                        market: bet.market,
+                        selection: bet.selection,
                         stake: bet.stake,
                         odds: bet.odds,
                       }}

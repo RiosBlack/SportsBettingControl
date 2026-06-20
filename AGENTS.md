@@ -38,6 +38,8 @@ Sistema profissional de gestão e controle de apostas esportivas desenvolvido co
 4. `pnpm dev`
 
 ## 📅 Changelogs
+- [2026-06-19 - Casa de Aposta na Tabela de Apostas](changelogs/2026-06-19-bets-table-bookmaker.md)
+- [2026-06-19 - Mercado e Seleção no Diálogo Finalizar Aposta](changelogs/2026-06-19-settle-dialog-market-selection.md)
 - [2026-06-19 - Resumo do dia na Dashboard](changelogs/2026-06-19-dashboard-day-summary.md)
 - [2026-06-19 - Normalização de eventDate na criação de apostas](changelogs/2026-06-19-event-date-normalization.md)
 - [2026-06-19 - Resumo de apostas na listagem](changelogs/2026-06-19-bets-period-summary.md)
